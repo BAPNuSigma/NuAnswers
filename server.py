@@ -10,16 +10,16 @@ load_dotenv()
 app = Flask(__name__)
 
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
+client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def get_openai_response(user_prompt):
     """Function to get response from OpenAI API"""
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-4",
             messages=[{"role": "user", "content": user_prompt}]
         )
-        return response["choices"][0]["message"]["content"]
+        return response.choices[0].message.content
     except Exception as e:
         return f"Error: {str(e)}"
 
