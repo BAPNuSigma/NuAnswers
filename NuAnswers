@@ -1,0 +1,122 @@
+import random
+
+class AccountingFinanceTutor:
+    def __init__(self):
+        self.hints_given = 0
+        self.max_hints = 3
+        self.student_progress = {}
+        
+        # Common encouraging phrases
+        self.encouragement_phrases = [
+            "You're on the right track!",
+            "That's a good start. Let's think about this further.",
+            "You're getting closer!",
+            "Good effort! Let's break this down step by step.",
+            "Almost there! Consider one more aspect..."
+        ]
+        
+        # Topic-specific guidance templates
+        self.topic_hints = {
+            "accounting_equation": [
+                "Remember the basic accounting equation: Assets = Liabilities + Equity",
+                "Think about what changes on each side of the equation when a transaction occurs",
+                "Consider how this transaction affects the company's assets and liabilities"
+            ],
+            "financial_ratios": [
+                "Start by identifying which financial statements you need",
+                "Consider what this ratio is trying to measure",
+                "Think about the relationship between the numerator and denominator"
+            ]
+        }
+
+    def greet_student(self):
+        """Initial greeting and session setup"""
+        welcome_message = """
+        Hello! I'm your Accounting & Finance Tutor. I'm here to help you understand 
+        concepts and work through problems. Remember, I won't give you direct answers, 
+        but I'll guide you to find them yourself.
+        
+        How can I help you today?
+        """
+        return welcome_message
+
+    def provide_hint(self, topic, question):
+        """Provides progressive hints based on the topic and question"""
+        if self.hints_given >= self.max_hints:
+            return ("Let's try a different approach. Can you explain your understanding "
+                   "of the problem so far?")
+        
+        if topic in self.topic_hints:
+            hint = self.topic_hints[topic][self.hints_given]
+            self.hints_given += 1
+            return f"{random.choice(self.encouragement_phrases)} {hint}"
+        
+        return "Let's break this down step by step. What do you understand about the problem so far?"
+
+    def evaluate_response(self, student_response, correct_approach):
+        """Evaluates student's response and provides appropriate feedback"""
+        # Convert both strings to lowercase for comparison
+        student_response = student_response.lower()
+        correct_approach = correct_approach.lower()
+        
+        # Calculate similarity (this is a simple implementation)
+        # In a real application, you might want to use more sophisticated NLP techniques
+        similarity = sum(word in correct_approach for word in student_response.split())
+        
+        if similarity > 0.8:
+            return "Excellent work! You've got the right idea!"
+        elif similarity > 0.5:
+            return ("You're on the right track, but let's refine your understanding. "
+                   "Can you elaborate on your reasoning?")
+        else:
+            return ("Let's review this concept. What do you know about the fundamental "
+                   "principles involved?")
+
+    def check_prerequisites(self, topic):
+        """Checks if student has necessary prerequisite knowledge"""
+        prerequisites = {
+            "financial_statements": ["accounting_equation", "basic_transactions"],
+            "financial_ratios": ["financial_statements"],
+            "npv_calculation": ["time_value_money", "cash_flows"]
+        }
+        
+        if topic in prerequisites:
+            return prerequisites[topic]
+        return []
+
+    def create_practice_problem(self, topic, difficulty):
+        """Generates a practice problem based on topic and difficulty"""
+        # This would contain a database of problems or a problem generator
+        # Simplified version shown here
+        practice_problems = {
+            "accounting_equation": {
+                "easy": "A company purchases $1,000 of inventory on credit. How does this affect the accounting equation?",
+                "medium": "A company issues $5,000 in common stock and purchases equipment worth $3,000 cash. Show the impact on the accounting equation.",
+                "hard": "A company takes out a $10,000 loan, purchases inventory for $7,000, and pays $2,000 in dividends. What's the net effect on the accounting equation?"
+            }
+        }
+        
+        return practice_problems.get(topic, {}).get(difficulty, "No problem available for this topic and difficulty level.")
+
+def main():
+    tutor = AccountingFinanceTutor()
+    print(tutor.greet_student())
+    
+    # Example interaction
+    while True:
+        user_input = input("\nStudent: ").lower()
+        
+        if user_input == "exit":
+            print("Tutor: Thank you for studying with me! Keep up the good work!")
+            break
+            
+        # Basic response handling
+        if "hint" in user_input:
+            print("Tutor:", tutor.provide_hint("accounting_equation", user_input))
+        elif "practice" in user_input:
+            print("Tutor:", tutor.create_practice_problem("accounting_equation", "medium"))
+        else:
+            print("Tutor: Let's explore that further. Can you explain your thinking?")
+
+if __name__ == "__main__":
+    main()
