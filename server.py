@@ -7,10 +7,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-app = Flask(__name__)
-
-
 client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+app = Flask(__name__)
 
 def get_openai_response(user_prompt):
     """Function to get response from OpenAI API"""
@@ -34,7 +33,6 @@ def chat():
 
     response = get_openai_response(user_input)
     return jsonify({"response": response})
-
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
