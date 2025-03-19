@@ -1,13 +1,21 @@
-from flask import Flask, request, jsonify
-import openai
 import os
+import openai
+from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 
 
 load_dotenv()
 
 
-client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+api_key = os.getenv("OPENAI_API_KEY")
+
+
+if not api_key:
+    raise ValueError("❌ ERROR: OPENAI_API_KEY is not set! Check your environment variables.")
+
+
+client = openai.OpenAI(api_key=api_key)
+
 
 app = Flask(__name__)
 
