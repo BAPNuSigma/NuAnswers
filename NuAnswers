@@ -28,6 +28,30 @@ class AccountingFinanceTutor:
                 "Think about the relationship between the numerator and denominator"
             ]
         }
+        
+        # Adding structured question sequences for different topics
+        self.question_sequences = {
+            "accounting_equation": [
+                "Can you tell me what the basic accounting equation is?",
+                "How do assets relate to liabilities and equity in this equation?",
+                "When we make a transaction, what two parts of the equation are affected?"
+            ],
+            "financial_statements": [
+                "What are the main financial statements we use in accounting?",
+                "How does the income statement connect to the balance sheet?",
+                "What's the purpose of the cash flow statement?"
+            ],
+            "financial_ratios": [
+                "What aspect of the company's performance are we trying to measure?",
+                "Which financial statements would contain the numbers we need?",
+                "How would we calculate this ratio step by step?"
+            ]
+        }
+        
+        # Track current question sequence and progress
+        self.current_topic = None
+        self.current_question_index = 0
+        self.student_understanding = {}
 
     def greet_student(self):
         """Initial greeting and session setup"""
@@ -40,37 +64,54 @@ class AccountingFinanceTutor:
         """
         return welcome_message
 
-    def provide_hint(self, topic, question):
-        """Provides progressive hints based on the topic and question"""
-        if self.hints_given >= self.max_hints:
-            return ("Let's try a different approach. Can you explain your understanding "
-                   "of the problem so far?")
-        
-        if topic in self.topic_hints:
-            hint = self.topic_hints[topic][self.hints_given]
-            self.hints_given += 1
-            return f"{random.choice(self.encouragement_phrases)} {hint}"
-        
-        return "Let's break this down step by step. What do you understand about the problem so far?"
+    def start_topic_discussion(self, topic):
+        """Initiates a new topic discussion with the first question"""
+        if topic in self.question_sequences:
+            self.current_topic = topic
+            self.current_question_index = 0
+            return self.question_sequences[topic][0]
+        return "Let's start with the basics. What would you like to understand about this topic?"
 
-    def evaluate_response(self, student_response, correct_approach):
-        """Evaluates student's response and provides appropriate feedback"""
-        # Convert both strings to lowercase for comparison
-        student_response = student_response.lower()
-        correct_approach = correct_approach.lower()
+    def evaluate_response(self, student_response, topic):
+        """Evaluates response and determines next question or guidance needed"""
+        if not self.current_topic:
+            return self.start_topic_discussion(topic)
+            
+        # Analyze student response and provide appropriate feedback
+        response_quality = self._assess_response(student_response)
         
-        # Calculate similarity (this is a simple implementation)
-        # In a real application, you might want to use more sophisticated NLP techniques
-        similarity = sum(word in correct_approach for word in student_response.split())
-        
-        if similarity > 0.8:
-            return "Excellent work! You've got the right idea!"
-        elif similarity > 0.5:
-            return ("You're on the right track, but let's refine your understanding. "
-                   "Can you elaborate on your reasoning?")
+        if response_quality == "good":
+            self.current_question_index += 1
+            if self.current_question_index < len(self.question_sequences[self.current_topic]):
+                return (f"{random.choice(self.encouragement_phrases)} "
+                       f"{self.question_sequences[self.current_topic][self.current_question_index]}")
+            else:
+                return "Excellent! You've shown good understanding of this topic. Would you like to try a practice problem?"
         else:
-            return ("Let's review this concept. What do you know about the fundamental "
-                   "principles involved?")
+            return self._provide_guided_hint()
+
+    def _assess_response(self, response):
+        """Assess the quality of student response"""
+        # This would contain more sophisticated analysis in a real implementation
+        # For now, using a simple keyword-based approach
+        key_concepts = {
+            "accounting_equation": ["assets", "liabilities", "equity", "balance"],
+            "financial_statements": ["balance sheet", "income statement", "cash flow"],
+            "financial_ratios": ["ratio", "calculate", "divide", "percentage"]
+        }
+        
+        if self.current_topic:
+            relevant_keywords = key_concepts.get(self.current_topic, [])
+            matches = sum(keyword in response.lower() for keyword in relevant_keywords)
+            return "good" if matches >= 2 else "needs_guidance"
+        return "needs_guidance"
+
+    def _provide_guided_hint(self):
+        """Provides a structured hint based on current topic and progress"""
+        if self.current_topic and self.current_question_index < len(self.topic_hints[self.current_topic]):
+            return (f"Let's think about this differently. "
+                   f"{self.topic_hints[self.current_topic][self.current_question_index]}")
+        return "Could you explain your thinking process to me?"
 
     def check_prerequisites(self, topic):
         """Checks if student has necessary prerequisite knowledge"""
@@ -102,21 +143,24 @@ def main():
     tutor = AccountingFinanceTutor()
     print(tutor.greet_student())
     
-    # Example interaction
     while True:
         user_input = input("\nStudent: ").lower()
         
         if user_input == "exit":
             print("Tutor: Thank you for studying with me! Keep up the good work!")
             break
-            
-        # Basic response handling
-        if "hint" in user_input:
-            print("Tutor:", tutor.provide_hint("accounting_equation", user_input))
-        elif "practice" in user_input:
-            print("Tutor:", tutor.create_practice_problem("accounting_equation", "medium"))
+        
+        # Enhanced response handling
+        if "help" in user_input or "start" in user_input:
+            for topic in tutor.question_sequences.keys():
+                if topic in user_input:
+                    print("Tutor:", tutor.start_topic_discussion(topic))
+                    break
+            else:
+                print("Tutor: What specific topic would you like to work on? "
+                      "I can help with accounting equations, financial statements, or financial ratios.")
         else:
-            print("Tutor: Let's explore that further. Can you explain your thinking?")
+            print("Tutor:", tutor.evaluate_response(user_input, tutor.current_topic))
 
 if __name__ == "__main__":
     main()
