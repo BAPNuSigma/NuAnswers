@@ -8,26 +8,19 @@ st.write("Welcome to your Accounting & Finance Tutor! I'm here to help you under
 # Initialize session state for conversation flow
 if 'conversation_state' not in st.session_state:
     st.session_state.conversation_state = 'initial'
-    st.session_state.current_topic = None
 
-# Topic selection
+# Main interaction
 if st.session_state.conversation_state == 'initial':
-    st.write("I can help you with:")
-    topics = ["Accounting Equation", "Financial Ratios", "Financial Statements", "Time Value of Money"]
-    selected_topic = st.radio("Select a topic you'd like to work on:", topics)
+    st.write("I can help you with accounting and finance concepts. What would you like to learn about?")
+    st.write("You can ask me about:")
+    st.markdown("- Accounting Equation and its applications")
+    st.markdown("- Financial Ratios and their interpretation")
+    st.markdown("- Financial Statements and their relationships")
+    st.markdown("- Time Value of Money concepts")
+    st.markdown("- Or any other accounting or finance topic you're curious about!")
     
-    if st.button("Start Learning"):
-        st.session_state.current_topic = selected_topic
-        st.session_state.conversation_state = 'topic_selected'
-        st.experimental_rerun()
-
-# Problem-focused interaction
-elif st.session_state.conversation_state == 'topic_selected':
-    st.write(f"Great choice! Let's work on {st.session_state.current_topic}.")
-    st.write("What specific problem or concept are you struggling with?")
-    
-    user_input = st.text_input("Describe your question or problem:")
-    if st.button("Get Help"):
+    user_input = st.text_input("What would you like to learn about?")
+    if st.button("Ask Question"):
         if user_input:
             try:
                 response = requests.post("https://nuanswers.onrender.com/chat", 
@@ -47,9 +40,4 @@ elif st.session_state.conversation_state == 'topic_selected':
                 st.error("I apologize, but I couldn't connect to the tutor service. Please try again later.")
                 st.write("Debug info:", str(e))
         else:
-            st.warning("Please describe your question or problem!")
-
-    if st.button("Choose a Different Topic"):
-        st.session_state.conversation_state = 'initial'
-        st.session_state.current_topic = None
-        st.experimental_rerun()
+            st.warning("Please enter your question!")
