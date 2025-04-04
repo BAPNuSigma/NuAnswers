@@ -1,32 +1,33 @@
 import os
-import openai
+import anthropic
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 
-
+# Load environment variables
 load_dotenv()
 
-
-api_key = os.getenv("OPENAI_API_KEY")
-
+# Get Anthropic API key
+api_key = os.getenv("ANTHROPIC_API_KEY")
 
 if not api_key:
-    raise ValueError("❌ ERROR: OPENAI_API_KEY is not set! Check your environment variables.")
+    raise ValueError("❌ ERROR: ANTHROPIC_API_KEY is not set! Check your environment variables.")
 
+# Initialize Claude client
+client = anthropic.Anthropic(api_key=api_key)
 
-client = openai.OpenAI(api_key=api_key)
-
-
+# Initialize Flask app
 app = Flask(__name__)
 
-def get_openai_response(user_prompt):
-    """Function to get response from OpenAI API"""
+def get_claude_response(user_prompt):
+    """Function to get response from Claude API"""
     try:
-        response = client.chat.completions.create(
-            model="gpt-4",
+        response = client.messages.create(
+            model="claude-3-5-haiku-20241022",  # or "claude-3-opus" if available to you
+            max_tokens=1000,
+            temperature=0.7,
             messages=[{"role": "user", "content": user_prompt}]
         )
-        return response.choices[0].message.content
+        return response.content[0].text
     except Exception as e:
         return f"Error: {str(e)}"
 
@@ -39,7 +40,7 @@ def chat():
     if not user_input:
         return jsonify({"error": "No message provided"}), 400
 
-    response = get_openai_response(user_input)
+    response = get_claude_response(user_input)
     return jsonify({"response": response})
 
 if __name__ == '__main__':
