@@ -11,14 +11,6 @@ if 'conversation_state' not in st.session_state:
 
 # Main interaction
 if st.session_state.conversation_state == 'initial':
-    st.write("I can help you with accounting and finance concepts. What would you like to learn about?")
-    st.write("You can ask me about:")
-    st.markdown("- Accounting Equation and its applications")
-    st.markdown("- Financial Ratios and their interpretation")
-    st.markdown("- Financial Statements and their relationships")
-    st.markdown("- Time Value of Money concepts")
-    st.markdown("- Or any other accounting or finance topic you're curious about!")
-    
     user_input = st.text_input("What would you like to learn about?")
     if st.button("Ask Question"):
         if user_input:
