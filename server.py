@@ -19,22 +19,17 @@ client = anthropic.Anthropic(api_key=api_key)
 app = Flask(__name__)
 
 def get_claude_response(user_prompt):
-    """Function to get response from Claude API using the Messages API."""
+    """Function to get response from Claude API"""
     try:
         print("⚡ Sending request to Claude...")
         print(f"📨 Prompt: {user_prompt}")
-        # Using a system message helps define the conversation context
         response = client.messages.create(
-            model="claude-3.5-sonnet-20241022",  # Change to "claude-3-5-haiku-20241022" if preferred
+            model="claude-3-5-haiku-20241022",  # or "claude-3-opus" if available to you
             max_tokens=1000,
             temperature=0.7,
-            messages=[
-                {"role": "system", "content": "You are a helpful tutor bot."},
-                {"role": "user", "content": user_prompt}
-            ]
+            messages=[{"role": "user", "content": user_prompt}]
         )
         print("✅ Received response from Claude")
-        print("📄 Full response:", response)
         return response.content[0].text
     except Exception as e:
         print(f"❌ Error while calling Claude: {str(e)}")
@@ -42,15 +37,15 @@ def get_claude_response(user_prompt):
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    """API Endpoint to handle chat requests."""
+    """API Endpoint to handle chat requests"""
     data = request.json
     user_input = data.get("message", "")
 
     if not user_input:
         return jsonify({"error": "No message provided"}), 400
 
-    response_text = get_claude_response(user_input)
-    return jsonify({"response": response_text})
+    response = get_claude_response(user_input)
+    return jsonify({"response": response})
 
 if __name__ == '__main__':
     print("🚀 Starting Flask server...")
