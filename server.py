@@ -21,14 +21,18 @@ app = Flask(__name__)
 def get_claude_response(user_prompt):
     """Function to get response from Claude API"""
     try:
+        print("⚡ Sending request to Claude...")
+        print(f"📨 Prompt: {user_prompt}")
         response = client.messages.create(
             model="claude-3-5-haiku-20241022",  # or "claude-3-opus" if available to you
             max_tokens=1000,
             temperature=0.7,
             messages=[{"role": "user", "content": user_prompt}]
         )
+        print("✅ Received response from Claude")
         return response.content[0].text
     except Exception as e:
+        print(f"❌ Error while calling Claude: {str(e)}")
         return f"Error: {str(e)}"
 
 @app.route('/chat', methods=['POST'])
@@ -44,4 +48,5 @@ def chat():
     return jsonify({"response": response})
 
 if __name__ == '__main__':
+    print("🚀 Starting Flask server...")
     app.run(host='0.0.0.0', port=5000, debug=True)
