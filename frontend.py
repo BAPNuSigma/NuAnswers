@@ -11,7 +11,7 @@ if 'conversation_state' not in st.session_state:
 
 # Main interaction
 if st.session_state.conversation_state == 'initial':
-    user_input = st.text_input("What would you like to learn about?")
+    user_input = st.text_input("What would you like to learn about?", height=100)
     if st.button("Ask Question"):
         if user_input:
             try:
