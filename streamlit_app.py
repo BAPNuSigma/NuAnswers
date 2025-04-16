@@ -4,6 +4,29 @@ import pandas as pd
 import datetime
 import os
 
+# Tutoring hours configuration
+TUTORING_HOURS = {
+    "Monday": [("10:30", "12:30")],    # 10:30 AM - 12:30 PM
+    "Tuesday": [("17:00", "19:00")],   # 5:00 PM - 7:00 PM
+    "Wednesday": [("12:00", "14:00")], # 12:00 PM - 2:00 PM
+    "Thursday": [("10:30", "12:30")],  # 10:30 AM - 12:30 PM
+    "Friday": [("13:00", "15:00")],    # 1:00 PM - 3:00 PM
+}
+
+def is_within_tutoring_hours():
+    """Check if current time is within tutoring hours."""
+    current_time = datetime.datetime.now()
+    current_day = current_time.strftime("%A")
+    current_time_str = current_time.strftime("%H:%M")
+    
+    if current_day not in TUTORING_HOURS:
+        return False
+        
+    for start_time, end_time in TUTORING_HOURS[current_day]:
+        if start_time <= current_time_str <= end_time:
+            return True
+    return False
+
 # Initialize session state for registration and tracking
 if "registered" not in st.session_state:
     st.session_state.registered = False
@@ -94,17 +117,46 @@ if not st.session_state.registered:
 # Show title and description only after registration
 if st.session_state.registered:
     st.title("💬 NuAnswers")
+    
+    # Check if current time is within tutoring hours
+    if is_within_tutoring_hours():
+        st.warning("""
+        ⚠️ In-person tutoring is currently available! 
+        
+        Please visit the in-person tutoring session instead of using the bot. 
+        The bot will be available after the tutoring session ends.
+        """)
+        st.stop()
+    
     st.write(
         "Hello! I am NuAnswers, Beta Alpha Psi: Nu Sigma Chapter's AI Tutor Bot. I'm here to help you understand concepts and work through problems. "
         "Remember, I won't give you direct answers, but I'll guide you to find them yourself. "
         "I can help you with accounting equations, financial ratios, financial statements, and time value of money concepts."
     )
 
-    # Get the API key from secrets.toml
-    openai_api_key = st.secrets.get("OPENAI_API_KEY")
+    # Get the API key from environment variable or secrets
+    openai_api_key = os.environ.get("OPENAI_API_KEY") or st.secrets.get("OPENAI_API_KEY")
 
-    if not openai_api_key or openai_api_key == "your-api-key-here":
-        st.error("Please configure your OpenAI API key in .streamlit/secrets.toml")
+    if not openai_api_key:
+        st.error("""
+        ⚠️ OpenAI API Key not configured!
+        
+        To use NuAnswers, you need to:
+        1. Get an API key from OpenAI (https://platform.openai.com/api-keys)
+        2. Add it as an environment variable:
+           - Key: OPENAI_API_KEY
+           - Value: your-api-key-here
+        3. Restart the application
+        
+        If you're deploying on Render:
+        1. Go to your Render dashboard
+        2. Select your service
+        3. Go to the "Environment" tab
+        4. Add a new environment variable:
+           - Key: OPENAI_API_KEY
+           - Value: your-api-key-here
+        5. Redeploy your service
+        """)
         st.stop()
 
     # Create an OpenAI client.
