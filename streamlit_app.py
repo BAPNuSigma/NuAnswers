@@ -328,108 +328,10 @@ if st.session_state.registered:
     # Create an OpenAI client
     client = OpenAI(api_key=openai_api_key)
 
-    # File upload section
-    st.subheader("📄 Upload Course Materials")
-    uploaded_files = st.file_uploader(
-        "Upload your course materials (PDF, DOCX, TXT, PPTX, CSV, XLS, XLSX)",
-        type=['pdf', 'docx', 'txt', 'pptx', 'csv', 'xls', 'xlsx'],
-        accept_multiple_files=True
-    )
-    
-    if uploaded_files:
-        for file in uploaded_files:
-            if file not in [doc['file'] for doc in st.session_state.uploaded_documents]:
-                text = extract_text_from_file(file)
-                if text:
-                    st.session_state.uploaded_documents.append({
-                        'file': file,
-                        'name': file.name,
-                        'content': text
-                    })
-                    st.success(f"Successfully processed {file.name}")
-    
-    # Search and document management section
-    if st.session_state.uploaded_documents:
-        st.subheader("📚 Your Uploaded Materials")
-        
-        # Search bar
-        search_col, reorder_col = st.columns([3, 1])
-        with search_col:
-            st.session_state.search_query = st.text_input("🔍 Search in documents", 
-                                                        value=st.session_state.search_query,
-                                                        placeholder="Search by filename or content")
-        
-        # Reorder button
-        with reorder_col:
-            if st.button("🔄 Reorder Documents"):
-                st.session_state.show_reorder = not getattr(st.session_state, 'show_reorder', False)
-        
-        # Reorder interface
-        if getattr(st.session_state, 'show_reorder', False):
-            st.info("Drag and drop documents to reorder them")
-            for i, doc in enumerate(st.session_state.uploaded_documents):
-                cols = st.columns([1, 4, 1])
-                with cols[0]:
-                    st.write(f"{i+1}.")
-                with cols[1]:
-                    st.write(doc['name'])
-                with cols[2]:
-                    if st.button("↑", key=f"up_{i}") and i > 0:
-                        st.session_state.uploaded_documents[i], st.session_state.uploaded_documents[i-1] = \
-                            st.session_state.uploaded_documents[i-1], st.session_state.uploaded_documents[i]
-                        st.rerun()
-                    if st.button("↓", key=f"down_{i}") and i < len(st.session_state.uploaded_documents) - 1:
-                        st.session_state.uploaded_documents[i], st.session_state.uploaded_documents[i+1] = \
-                            st.session_state.uploaded_documents[i+1], st.session_state.uploaded_documents[i]
-                        st.rerun()
-        
-        # Display filtered documents
-        filtered_docs = search_in_documents(st.session_state.search_query, st.session_state.uploaded_documents)
-        
-        if not filtered_docs:
-            st.info("No documents match your search query.")
-        else:
-            for i, doc in enumerate(filtered_docs):
-                cols = st.columns([4, 1])
-                with cols[0].expander(doc['name']):
-                    # Highlight search terms in content
-                    content = doc['content']
-                    if st.session_state.search_query:
-                        query = st.session_state.search_query.lower()
-                        start = content.lower().find(query)
-                        if start != -1:
-                            end = start + len(query)
-                            highlighted = (
-                                content[:start] +
-                                f"**{content[start:end]}**" +
-                                content[end:]
-                            )
-                            st.markdown(highlighted)
-                        else:
-                            st.text(content[:500] + "..." if len(content) > 500 else content)
-                    else:
-                        st.text(content[:500] + "..." if len(content) > 500 else content)
-                
-                # Delete button with confirmation
-                if cols[1].button("🗑️", key=f"delete_{i}"):
-                    st.session_state.doc_to_delete = doc
-                
-                # Confirmation dialog
-                if st.session_state.doc_to_delete == doc:
-                    st.warning(f"Are you sure you want to delete {doc['name']}?")
-                    confirm_cols = st.columns(2)
-                    if confirm_cols[0].button("Yes, delete it", key=f"confirm_delete_{i}"):
-                        st.session_state.uploaded_documents.remove(doc)
-                        st.session_state.doc_to_delete = None
-                        st.rerun()
-                    if confirm_cols[1].button("Cancel", key=f"cancel_delete_{i}"):
-                        st.session_state.doc_to_delete = None
-                        st.rerun()
-
     # Create a session state variable to store the chat messages
     if "messages" not in st.session_state:
         st.session_state.messages = [
-            {"role": "assistant", "content": "Hello! I'm NuAnswers. I'm here to help you understand concepts and work through problems. What would you like to work on today?"}
+            {"role": "assistant", "content": "Hello! I'm your Accounting & Finance Tutor. I'm here to help you understand concepts and work through problems. What would you like to work on today?"}
         ]
 
     st.write(
