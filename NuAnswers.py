@@ -162,24 +162,14 @@ if not st.session_state.registered:
         grade = st.selectbox("Grade", ["Freshman", "Sophomore", "Junior", "Senior", "Graduate"])
         campus = st.selectbox("Campus", ["Florham", "Metro", "Vancouver"])
         
-        # Major selection with session state
+        # Major selection
         major = st.selectbox(
             "Major",
-            ["Accounting", "Finance", "MIS [Management Information Systems]"],
-            key="temp_major",
-            value=st.session_state.form_major
+            ["Accounting", "Finance", "MIS [Management Information Systems]"]
         )
         
-        if major != st.session_state.form_major:
-            st.form_submit_button("Update Major", on_click=update_major)
-        
-        # Course name input based on major
-        major_prefix = st.session_state.form_major.split('[')[0].strip()
-        course_name = st.text_input(
-            f"Which {major_prefix} class are you taking that relates to what you need help in?",
-            key=f"course_input_{major_prefix}"
-        )
-        
+        # General course question
+        course_name = st.text_input("Which class are you taking that relates to what you need help in?")
         course_id = st.text_input("Course ID (EX: ACCT_####_##)")
         professor = st.text_input("Professor's Name")
         
@@ -196,7 +186,7 @@ if not st.session_state.registered:
                     "email": email,
                     "grade": grade,
                     "campus": campus,
-                    "major": st.session_state.form_major,
+                    "major": major,
                     "course_name": course_name,
                     "course_id": course_id,
                     "professor": professor
