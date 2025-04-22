@@ -60,9 +60,9 @@ TUTORING_HOURS = {
 
 def is_within_tutoring_hours():
     """Check if current time is within tutoring hours."""
-    # Get current time in local timezone
-    local_tz = datetime.now(timezone.utc).astimezone().tzinfo
-    current_time = datetime.now(local_tz)
+    # Get current time in Eastern Time
+    et_tz = ZoneInfo("America/New_York")
+    current_time = datetime.now(et_tz)
     
     current_day = current_time.strftime("%A")
     current_hour = current_time.hour
@@ -77,7 +77,7 @@ def is_within_tutoring_hours():
         "current_hour": current_hour,
         "current_minute": current_minute,
         "current_time_float": current_time_float,
-        "timezone": str(local_tz)
+        "timezone": "Eastern Time (ET)"
     }
     
     # If it's not a tutoring day, return False
@@ -157,12 +157,13 @@ def save_to_csv(data, filepath):
 
 def save_registration(user_data, start_time):
     """Save registration data to CSV"""
-    end_time = datetime.now()
+    et_tz = ZoneInfo("America/New_York")
+    end_time = datetime.now(et_tz)
     usage_time = (end_time - start_time).total_seconds() / 60
     
     # Create new registration entry
     new_registration = {
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "timestamp": end_time.strftime("%Y-%m-%d %H:%M:%S"),
         "full_name": user_data["full_name"],
         "student_id": user_data["student_id"],
         "email": user_data["email"],
@@ -680,8 +681,9 @@ if "completion_data" not in st.session_state:
 
 def save_feedback(rating, topic, difficulty):
     """Save feedback data"""
+    et_tz = ZoneInfo("America/New_York")
     feedback_entry = {
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "timestamp": datetime.now(et_tz).strftime("%Y-%m-%d %H:%M:%S"),
         "student_id": st.session_state.user_data.get("student_id"),
         "course_id": st.session_state.user_data.get("course_id"),
         "rating": rating,
@@ -693,8 +695,9 @@ def save_feedback(rating, topic, difficulty):
 
 def track_topic(topic, difficulty=None):
     """Track topic data"""
+    et_tz = ZoneInfo("America/New_York")
     topic_entry = {
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "timestamp": datetime.now(et_tz).strftime("%Y-%m-%d %H:%M:%S"),
         "student_id": st.session_state.user_data.get("student_id"),
         "course_id": st.session_state.user_data.get("course_id"),
         "topic": topic,
@@ -705,8 +708,9 @@ def track_topic(topic, difficulty=None):
 
 def track_completion(completed):
     """Track course completion"""
+    et_tz = ZoneInfo("America/New_York")
     completion_entry = {
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "timestamp": datetime.now(et_tz).strftime("%Y-%m-%d %H:%M:%S"),
         "student_id": st.session_state.user_data.get("student_id"),
         "course_id": st.session_state.user_data.get("course_id"),
         "completed": completed
