@@ -1,7 +1,7 @@
 import streamlit as st
 from openai import OpenAI
 import pandas as pd
-import datetime
+from datetime import datetime, timezone, timedelta
 import os
 import tempfile
 from pathlib import Path
@@ -14,7 +14,6 @@ import openpyxl
 import io
 import base64
 from zoneinfo import ZoneInfo
-from datetime import datetime, timezone
 
 # Set page config
 st.set_page_config(
@@ -158,12 +157,12 @@ def save_to_csv(data, filepath):
 
 def save_registration(user_data, start_time):
     """Save registration data to CSV"""
-    end_time = datetime.datetime.now()
+    end_time = datetime.now()
     usage_time = (end_time - start_time).total_seconds() / 60
     
     # Create new registration entry
     new_registration = {
-        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "full_name": user_data["full_name"],
         "student_id": user_data["student_id"],
         "email": user_data["email"],
@@ -252,7 +251,7 @@ if not st.session_state.registered:
                     "course_id": course_id,
                     "professor": professor
                 }
-                st.session_state.start_time = datetime.datetime.now()
+                st.session_state.start_time = datetime.now()
                 
                 # Save registration data
                 save_registration(st.session_state.user_data, st.session_state.start_time)
@@ -682,7 +681,7 @@ if "completion_data" not in st.session_state:
 def save_feedback(rating, topic, difficulty):
     """Save feedback data"""
     feedback_entry = {
-        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "student_id": st.session_state.user_data.get("student_id"),
         "course_id": st.session_state.user_data.get("course_id"),
         "rating": rating,
@@ -695,7 +694,7 @@ def save_feedback(rating, topic, difficulty):
 def track_topic(topic, difficulty=None):
     """Track topic data"""
     topic_entry = {
-        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "student_id": st.session_state.user_data.get("student_id"),
         "course_id": st.session_state.user_data.get("course_id"),
         "topic": topic,
@@ -707,7 +706,7 @@ def track_topic(topic, difficulty=None):
 def track_completion(completed):
     """Track course completion"""
     completion_entry = {
-        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "student_id": st.session_state.user_data.get("student_id"),
         "course_id": st.session_state.user_data.get("course_id"),
         "completed": completed
