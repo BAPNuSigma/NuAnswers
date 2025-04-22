@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 import calendar
 import numpy as np
 from pathlib import Path
+import io
 
 # Set page config
 st.set_page_config(
@@ -60,15 +61,90 @@ if entered_password != admin_password:
 
 st.sidebar.success("✅ Admin access granted!")
 
+# Configure data directory
+DATA_DIR = Path("/data" if os.path.exists("/data") else ".")
+REGISTRATION_DATA_PATH = DATA_DIR / "registration_data.csv"
+FEEDBACK_DATA_PATH = DATA_DIR / "feedback_data.csv"
+TOPIC_DATA_PATH = DATA_DIR / "topic_data.csv"
+COMPLETION_DATA_PATH = DATA_DIR / "completion_data.csv"
+
+def load_data(filepath):
+    """Load data from CSV file with error handling"""
+    try:
+        if filepath.exists():
+            return pd.read_csv(filepath)
+        return pd.DataFrame()
+    except Exception as e:
+        st.error(f"Error loading data from {filepath}: {str(e)}")
+        return pd.DataFrame()
+
+# Add download section
+def create_download_section():
+    """Create download section for all data"""
+    st.subheader("📥 Download Data")
+    
+    download_col1, download_col2 = st.columns(2)
+    
+    # Prepare all data
+    all_data = {
+        "Registration Data": load_data(REGISTRATION_DATA_PATH),
+        "Feedback Data": load_data(FEEDBACK_DATA_PATH),
+        "Topic Data": load_data(TOPIC_DATA_PATH),
+        "Completion Data": load_data(COMPLETION_DATA_PATH)
+    }
+    
+    # Create Excel file with multiple sheets
+    excel_buffer = io.BytesIO()
+    with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
+        for sheet_name, df in all_data.items():
+            if not df.empty:
+                df.to_excel(writer, sheet_name=sheet_name, index=False)
+    
+    with download_col1:
+        # Download individual CSVs
+        for name, df in all_data.items():
+            if not df.empty:
+                csv_data = df.to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    label=f"Download {name} (CSV)",
+                    data=csv_data,
+                    file_name=f"nuanswers_{name.lower().replace(' ', '_')}.csv",
+                    mime="text/csv"
+                )
+    
+    with download_col2:
+        # Download combined Excel file
+        excel_buffer.seek(0)
+        st.download_button(
+            label="Download All Data (Excel)",
+            data=excel_buffer,
+            file_name="nuanswers_all_data.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
 try:
-    # Load data
-    csv_path = "registration_data.csv"
-    if not os.path.exists(csv_path):
-        st.info("No registration data available yet.")
+    # Load all data
+    df = load_data(REGISTRATION_DATA_PATH)
+    feedback_df = load_data(FEEDBACK_DATA_PATH)
+    topic_df = load_data(TOPIC_DATA_PATH)
+    completion_df = load_data(COMPLETION_DATA_PATH)
+    
+    if df.empty and feedback_df.empty and topic_df.empty and completion_df.empty:
+        st.info("No data available yet.")
         st.stop()
+    
+    # Convert timestamp columns to datetime
+    if not df.empty:
+        df['timestamp'] = pd.to_datetime(df['timestamp'])
+    if not feedback_df.empty:
+        feedback_df['timestamp'] = pd.to_datetime(feedback_df['timestamp'])
+    if not topic_df.empty:
+        topic_df['timestamp'] = pd.to_datetime(topic_df['timestamp'])
+    if not completion_df.empty:
+        completion_df['timestamp'] = pd.to_datetime(completion_df['timestamp'])
         
-    df = pd.read_csv(csv_path)
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
+    # Add download section at the top
+    create_download_section()
     
     # Overview metrics
     col1, col2, col3, col4 = st.columns(4)
