@@ -47,41 +47,94 @@ NuAnswers is an intelligent tutoring bot developed by Beta Alpha Psi: Nu Sigma C
 - Total registrations and unique students
 - Total and average usage time
 - Return user analysis and retention rates
+- Real-time system performance metrics
+- Department-specific analytics
 
 #### Time-Based Analytics
 - Daily and weekly usage patterns
 - Peak usage times heatmap
 - Session duration analysis
 - Hourly distribution of activity
+- Time zone-aware analytics (EST)
+- Historical trend analysis
 
 #### Academic Performance Metrics
 - Grade level progression analysis
 - Major and course distribution
 - Cross-analysis of academic factors
 - Professor engagement statistics
+- Course success rates
+- Department performance comparisons
+- Semester-to-semester comparisons
+- Year-over-year growth analysis
 
-#### User Engagement Metrics
+#### User Engagement Analysis
 - Session frequency patterns
 - Time between sessions analysis
 - Return user behavior
 - User retention statistics
+- Engagement metrics by demographic
+- Usage patterns by academic level
+- Student success prediction
+- Usage forecasting
 
-#### Document Analytics
-- File type distribution
-- Documents per student
-- Upload patterns and trends
+#### Demographic Analysis
+- Student demographics distribution
+- Department and major analysis
+- Campus-specific metrics
+- Grade level distribution
+- Cross-demographic analysis
+- Usage patterns by demographic
 
-#### Chat Interaction Analysis
-- Message statistics and patterns
-- Average message length
-- User engagement metrics
-- Interaction frequency
+#### System Performance Metrics
+- Response time analysis
+- Error rate monitoring
+- System uptime tracking
+- Performance trends
+- Resource utilization
+- Peak load analysis
 
-#### Enhanced Filtering and Export
-- Multi-dimensional data filtering
-- Date range selection
-- Major and campus filtering
-- Export to CSV and Excel formats
+#### Content Analysis
+- Topic popularity and trends
+- Content engagement metrics
+- Resource utilization patterns
+- Search term analysis
+- Document access patterns
+- Content effectiveness metrics
+
+#### Feedback and Quality Metrics
+- User satisfaction tracking
+- Response quality analysis
+- Resolution time metrics
+- Service improvement tracking
+- Quality trend analysis
+- User feedback patterns
+
+#### Predictive Analytics
+- Usage forecasting
+- Peak time predictions
+- Student success prediction
+- Growth trend analysis
+- Resource demand forecasting
+- Performance optimization insights
+
+#### Custom Reports and Exports
+- Date range analysis
+- Department-specific reports
+- Custom metric selection
+- Scheduled report generation
+- Multiple export formats (CSV, Excel)
+- Interactive data filtering
+- Real-time report generation
+- Automated report delivery
+
+#### Data Management
+- Secure data clearing options
+- Individual data type management
+- Bulk data operations
+- Data backup and restore
+- Data validation and integrity checks
+- Audit logging
 
 ## 🚀 Getting Started
 
