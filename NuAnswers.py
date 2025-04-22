@@ -142,20 +142,18 @@ with st.sidebar:
     st.title("📚 NuAnswers")
 
 # Initialize session state for form
-if "current_major" not in st.session_state:
-    st.session_state.current_major = "Accounting"
+if "form_major" not in st.session_state:
+    st.session_state.form_major = "Accounting"
+
+def update_major():
+    """Update the major in session state"""
+    st.session_state.form_major = st.session_state.temp_major
+    st.rerun()
 
 # Registration form
 if not st.session_state.registered:
     st.title("📝 Registration Form")
     st.write("Please complete the registration form to use NuAnswers.")
-    
-    # Major selection outside the form
-    major = st.selectbox(
-        "Major",
-        ["Accounting", "Finance", "MIS [Management Information Systems]"],
-        key="major"
-    )
     
     with st.form("registration_form", clear_on_submit=False):
         full_name = st.text_input("Full Name")
@@ -164,8 +162,19 @@ if not st.session_state.registered:
         grade = st.selectbox("Grade", ["Freshman", "Sophomore", "Junior", "Senior", "Graduate"])
         campus = st.selectbox("Campus", ["Florham", "Metro", "Vancouver"])
         
+        # Major selection with session state
+        major = st.selectbox(
+            "Major",
+            ["Accounting", "Finance", "MIS [Management Information Systems]"],
+            key="temp_major",
+            value=st.session_state.form_major
+        )
+        
+        if major != st.session_state.form_major:
+            st.form_submit_button("Update Major", on_click=update_major)
+        
         # Course name input based on major
-        major_prefix = major.split('[')[0].strip()
+        major_prefix = st.session_state.form_major.split('[')[0].strip()
         course_name = st.text_input(
             f"Which {major_prefix} class are you taking that relates to what you need help in?",
             key=f"course_input_{major_prefix}"
@@ -200,11 +209,6 @@ if not st.session_state.registered:
                 # Set registered state
                 st.session_state.registered = True
                 st.rerun()
-        
-        # Update current major if it changed
-        if major != st.session_state.current_major:
-            st.session_state.current_major = major
-            st.rerun()
 
 # Function to extract text from different file types
 def extract_text_from_file(file):
