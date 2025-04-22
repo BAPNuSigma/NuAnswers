@@ -59,15 +59,25 @@ TUTORING_HOURS = {
 
 def is_within_tutoring_hours():
     """Check if current time is within tutoring hours."""
+    # Get current time in local timezone
     current_time = datetime.datetime.now()
     current_day = current_time.strftime("%A")
     current_hour = current_time.hour
     current_minute = current_time.minute
     current_time_float = current_hour + (current_minute / 60)
     
+    # Debug logging
+    st.session_state.debug_time = {
+        "current_time": current_time.strftime("%I:%M %p"),
+        "current_day": current_day,
+        "current_time_float": current_time_float
+    }
+    
+    # If it's not a tutoring day, return False
     if current_day not in TUTORING_HOURS:
         return False
-        
+    
+    # Check each tutoring time slot
     for start_time_str, end_time_str in TUTORING_HOURS[current_day]:
         # Convert time strings to float hours (e.g., "13:30" -> 13.5)
         start_hour, start_minute = map(int, start_time_str.split(":"))
@@ -76,7 +86,19 @@ def is_within_tutoring_hours():
         start_time_float = start_hour + (start_minute / 60)
         end_time_float = end_hour + (end_minute / 60)
         
-        if start_time_float <= current_time_float <= end_time_float:
+        # Add to debug info
+        st.session_state.debug_time.update({
+            "tutoring_start": f"{start_hour:02d}:{start_minute:02d}",
+            "tutoring_end": f"{end_hour:02d}:{end_minute:02d}",
+            "start_time_float": start_time_float,
+            "end_time_float": end_time_float
+        })
+        
+        # Check if current time is within the tutoring slot
+        is_within = start_time_float <= current_time_float <= end_time_float
+        st.session_state.debug_time["is_within"] = is_within
+        
+        if is_within:
             return True
     return False
 
@@ -330,6 +352,10 @@ if st.session_state.registered:
     
     # Check if current time is within tutoring hours
     if is_within_tutoring_hours():
+        # Show debug information in an expander
+        with st.expander("Debug Time Information"):
+            st.json(st.session_state.debug_time)
+            
         st.warning("""
         ⚠️ In-person tutoring is currently available! 
         
