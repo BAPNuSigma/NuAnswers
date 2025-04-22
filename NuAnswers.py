@@ -196,7 +196,7 @@ if not st.session_state.registered:
                     "email": email,
                     "grade": grade,
                     "campus": campus,
-                    "major": major,
+                    "major": st.session_state.form_major,
                     "course_name": course_name,
                     "course_id": course_id,
                     "professor": professor
