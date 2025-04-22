@@ -83,8 +83,39 @@ if "registration_data" not in st.session_state:
         "major", "course_name", "course_id", "professor", "usage_time_minutes"
     ])
 
+# Configure data directory
+DATA_DIR = Path("/data" if os.path.exists("/data") else ".")
+REGISTRATION_DATA_PATH = DATA_DIR / "registration_data.csv"
+FEEDBACK_DATA_PATH = DATA_DIR / "feedback_data.csv"
+TOPIC_DATA_PATH = DATA_DIR / "topic_data.csv"
+COMPLETION_DATA_PATH = DATA_DIR / "completion_data.csv"
+
+# Create data directory if it doesn't exist
+DATA_DIR.mkdir(exist_ok=True)
+
+def save_to_csv(data, filepath):
+    """Save data to CSV file with error handling"""
+    try:
+        # Convert to DataFrame if it's a dictionary
+        if isinstance(data, dict):
+            df = pd.DataFrame([data])
+        elif isinstance(data, list):
+            df = pd.DataFrame(data)
+        else:
+            df = data
+            
+        # Load existing data if file exists
+        if filepath.exists():
+            existing_df = pd.read_csv(filepath)
+            df = pd.concat([existing_df, df], ignore_index=True)
+        
+        # Save to CSV
+        df.to_csv(filepath, index=False)
+    except Exception as e:
+        st.error(f"Failed to save data to {filepath}: {str(e)}")
+
 def save_registration(user_data, start_time):
-    """Save registration data to session state DataFrame"""
+    """Save registration data to CSV"""
     end_time = datetime.datetime.now()
     usage_time = (end_time - start_time).total_seconds() / 60
     
@@ -103,26 +134,8 @@ def save_registration(user_data, start_time):
         "usage_time_minutes": usage_time
     }
     
-    # Add new registration to the DataFrame
-    st.session_state.registration_data = pd.concat([
-        st.session_state.registration_data,
-        pd.DataFrame([new_registration])
-    ], ignore_index=True)
-    
-    # Save to CSV file for persistence
-    try:
-        # Load existing data if file exists
-        csv_path = "registration_data.csv"
-        if os.path.exists(csv_path):
-            existing_data = pd.read_csv(csv_path)
-            combined_data = pd.concat([existing_data, pd.DataFrame([new_registration])], ignore_index=True)
-        else:
-            combined_data = pd.DataFrame([new_registration])
-        
-        # Save combined data back to CSV
-        combined_data.to_csv(csv_path, index=False)
-    except Exception as e:
-        st.error(f"Failed to save registration data: {str(e)}")
+    # Save to CSV
+    save_to_csv(new_registration, REGISTRATION_DATA_PATH)
 
 # Create a sidebar
 with st.sidebar:
@@ -571,7 +584,7 @@ if "completion_data" not in st.session_state:
     st.session_state.completion_data = []
 
 def save_feedback(rating, topic, difficulty):
-    """Save feedback data to session state"""
+    """Save feedback data"""
     feedback_entry = {
         "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "student_id": st.session_state.user_data.get("student_id"),
@@ -581,6 +594,7 @@ def save_feedback(rating, topic, difficulty):
         "difficulty": difficulty
     }
     st.session_state.feedback_data.append(feedback_entry)
+    save_to_csv(feedback_entry, FEEDBACK_DATA_PATH)
 
 def track_topic(topic, difficulty=None):
     """Track topic data"""
@@ -592,6 +606,7 @@ def track_topic(topic, difficulty=None):
         "difficulty": difficulty
     }
     st.session_state.topic_data.append(topic_entry)
+    save_to_csv(topic_entry, TOPIC_DATA_PATH)
 
 def track_completion(completed):
     """Track course completion"""
@@ -602,3 +617,4 @@ def track_completion(completed):
         "completed": completed
     }
     st.session_state.completion_data.append(completion_entry)
+    save_to_csv(completion_entry, COMPLETION_DATA_PATH)
