@@ -157,9 +157,9 @@ if not st.session_state.registered:
         # Course-specific questions based on major
         if major == "Accounting":
             course_name = st.text_input("Which Accounting class are you taking that relates to what you need help in?")
-        if major == "Finance":
+        elif major == "Finance":
             course_name = st.text_input("Which Finance class are you taking that relates to what you need help in?")
-        if major == "MIS [Management Information Systems]":
+        elif major == "MIS [Management Information Systems]":
             course_name = st.text_input("Which MIS class are you taking that relates to what you need help in?")
         
         course_id = st.text_input("Course ID (EX: ACCT_####_##)")
