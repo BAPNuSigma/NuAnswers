@@ -497,6 +497,31 @@ Example of bad tutoring:
         st.session_state.messages = []
         st.rerun()
 
+    # Add feedback section after chat
+    if st.session_state.messages and len(st.session_state.messages) > 0:
+        st.divider()
+        st.subheader("📝 Session Feedback")
+        
+        feedback_col1, feedback_col2, feedback_col3 = st.columns(3)
+        
+        with feedback_col1:
+            topic = st.text_input("What topic did you discuss?", key="feedback_topic")
+        
+        with feedback_col2:
+            rating = st.slider("How helpful was this session?", 1, 5, 3, key="feedback_rating")
+        
+        with feedback_col3:
+            difficulty = st.slider("How difficult was the topic?", 1, 5, 3, key="feedback_difficulty")
+        
+        if st.button("Submit Feedback"):
+            if topic:
+                save_feedback(rating, topic, difficulty)
+                track_topic(topic, difficulty)
+                track_completion(True)
+                st.success("Thank you for your feedback!")
+            else:
+                st.warning("Please enter the topic discussed.")
+
 def show_admin_panel():
     """Display admin panel with registration statistics"""
     st.header("Admin Panel")
@@ -536,3 +561,44 @@ def show_admin_panel():
             st.info("No registration data available yet.")
     except Exception as e:
         st.error(f"Error loading registration data: {str(e)}")
+
+# Initialize session state for feedback and topic tracking
+if "feedback_data" not in st.session_state:
+    st.session_state.feedback_data = []
+if "topic_data" not in st.session_state:
+    st.session_state.topic_data = []
+if "completion_data" not in st.session_state:
+    st.session_state.completion_data = []
+
+def save_feedback(rating, topic, difficulty):
+    """Save feedback data to session state"""
+    feedback_entry = {
+        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "student_id": st.session_state.user_data.get("student_id"),
+        "course_id": st.session_state.user_data.get("course_id"),
+        "rating": rating,
+        "topic": topic,
+        "difficulty": difficulty
+    }
+    st.session_state.feedback_data.append(feedback_entry)
+
+def track_topic(topic, difficulty=None):
+    """Track topic data"""
+    topic_entry = {
+        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "student_id": st.session_state.user_data.get("student_id"),
+        "course_id": st.session_state.user_data.get("course_id"),
+        "topic": topic,
+        "difficulty": difficulty
+    }
+    st.session_state.topic_data.append(topic_entry)
+
+def track_completion(completed):
+    """Track course completion"""
+    completion_entry = {
+        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "student_id": st.session_state.user_data.get("student_id"),
+        "course_id": st.session_state.user_data.get("course_id"),
+        "completed": completed
+    }
+    st.session_state.completion_data.append(completion_entry)
