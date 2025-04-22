@@ -130,7 +130,7 @@ streamlit run streamlit_app.py
    - If you see a certificate warning, wait a few minutes and refresh
 5. Deploy the service
 
-## �� Configuration
+## 🔐 Configuration
 
 ### File Upload Limits
 - Maximum file size: 200MB
@@ -173,8 +173,8 @@ TUTORING_HOURS = {
 ## 📝 Registration Data
 The system collects and analyzes:
 - Full Name
-- Student ID
-- Email
+- Student ID (must be exactly 7 digits)
+- Email (must use @student.fdu.edu or @fdu.edu domain)
 - Grade Level
 - Campus
 - Major
@@ -193,7 +193,10 @@ The system collects and analyzes:
 - HTTPS encryption
 - Strict Transport Security (HSTS)
 - Secure cookie handling
-- Input validation and sanitization
+- Input validation and sanitization:
+  - Student ID validation (7 digits)
+  - Email domain validation (@student.fdu.edu or @fdu.edu)
+  - Required field checks
 - Secure image processing
 
 ## 🤝 Contributing
