@@ -159,6 +159,13 @@ def save_registration(user_data, start_time):
     """Save registration data to CSV"""
     et_tz = ZoneInfo("America/New_York")
     end_time = datetime.now(et_tz)
+    
+    # Convert start_time to timezone-aware if it isn't already
+    if start_time.tzinfo is None:
+        start_time = start_time.replace(tzinfo=et_tz)
+    else:
+        start_time = start_time.astimezone(et_tz)
+    
     usage_time = (end_time - start_time).total_seconds() / 60
     
     # Create new registration entry
@@ -252,7 +259,9 @@ if not st.session_state.registered:
                     "course_id": course_id,
                     "professor": professor
                 }
-                st.session_state.start_time = datetime.now()
+                # Set start time with timezone
+                et_tz = ZoneInfo("America/New_York")
+                st.session_state.start_time = datetime.now(et_tz)
                 
                 # Save registration data
                 save_registration(st.session_state.user_data, st.session_state.start_time)
