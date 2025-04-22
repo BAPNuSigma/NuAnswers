@@ -154,13 +154,8 @@ if not st.session_state.registered:
         campus = st.selectbox("Campus", ["Florham", "Metro", "Vancouver"])
         major = st.selectbox("Major", ["Accounting", "Finance", "MIS [Management Information Systems]"])
         
-        # Course-specific questions based on major
-        if major == "Accounting":
-            course_name = st.text_input("Which Accounting class are you taking that relates to what you need help in?")
-        elif major == "Finance":
-            course_name = st.text_input("Which Finance class are you taking that relates to what you need help in?")
-        elif major == "MIS [Management Information Systems]":
-            course_name = st.text_input("Which MIS class are you taking that relates to what you need help in?")
+        # Course-specific question with dynamic label based on major
+        course_name = st.text_input(f"Which {major.split('[')[0].strip()} class are you taking that relates to what you need help in?")
         
         course_id = st.text_input("Course ID (EX: ACCT_####_##)")
         professor = st.text_input("Professor's Name")
