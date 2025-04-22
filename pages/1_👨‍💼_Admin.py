@@ -188,7 +188,9 @@ try:
         
         # Create a pivot table for the heatmap
         peak_pivot = peak_usage.pivot(index='day', columns='hour', values='count')
-        peak_pivot = peak_pivot.reindex(calendar.day_name)
+        # Use explicit day order instead of calendar.day_name
+        day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        peak_pivot = peak_pivot.reindex(day_order)
         
         fig_heatmap = px.imshow(peak_pivot,
                                title='Peak Usage Times Heatmap',
