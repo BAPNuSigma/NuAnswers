@@ -13,6 +13,8 @@ import xlrd
 import openpyxl
 import io
 import base64
+from zoneinfo import ZoneInfo
+from datetime import datetime, timezone
 
 # Set page config
 st.set_page_config(
@@ -48,7 +50,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Tutoring hours configuration
+# Tutoring hours configuration (in 24-hour format)
 TUTORING_HOURS = {
     "Monday": [("10:30", "12:30")],    # 10:30 AM - 12:30 PM
     "Tuesday": [("17:00", "19:00")],   # 5:00 PM - 7:00 PM
@@ -60,21 +62,28 @@ TUTORING_HOURS = {
 def is_within_tutoring_hours():
     """Check if current time is within tutoring hours."""
     # Get current time in local timezone
-    current_time = datetime.datetime.now()
+    local_tz = datetime.now(timezone.utc).astimezone().tzinfo
+    current_time = datetime.now(local_tz)
+    
     current_day = current_time.strftime("%A")
     current_hour = current_time.hour
     current_minute = current_time.minute
     current_time_float = current_hour + (current_minute / 60)
     
-    # Debug logging
+    # Debug logging with more detailed time information
     st.session_state.debug_time = {
         "current_time": current_time.strftime("%I:%M %p"),
+        "current_time_24h": current_time.strftime("%H:%M"),
         "current_day": current_day,
-        "current_time_float": current_time_float
+        "current_hour": current_hour,
+        "current_minute": current_minute,
+        "current_time_float": current_time_float,
+        "timezone": str(local_tz)
     }
     
     # If it's not a tutoring day, return False
     if current_day not in TUTORING_HOURS:
+        st.session_state.debug_time["reason"] = "Not a tutoring day"
         return False
     
     # Check each tutoring time slot
@@ -97,7 +106,10 @@ def is_within_tutoring_hours():
         
         # Check if current time is within the tutoring slot
         if current_time_float >= start_time_float and current_time_float <= end_time_float:
+            st.session_state.debug_time["reason"] = "Within tutoring hours"
             return True
+            
+    st.session_state.debug_time["reason"] = "Outside tutoring hours"
     return False
 
 # Initialize session state for registration and tracking
