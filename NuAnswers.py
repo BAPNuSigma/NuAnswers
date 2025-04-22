@@ -12,6 +12,7 @@ import csv
 import xlrd
 import openpyxl
 import io
+import base64
 
 # Set page config
 st.set_page_config(
@@ -340,22 +341,39 @@ if st.session_state.registered:
     # File upload section
     st.subheader("📄 Upload Course Materials")
     uploaded_files = st.file_uploader(
-        "Upload your course materials (PDF, DOCX, TXT, PPTX, CSV, XLS, XLSX)",
-        type=['pdf', 'docx', 'txt', 'pptx', 'csv', 'xls', 'xlsx'],
+        "Upload your course materials (PDF, DOCX, TXT, PPTX, CSV, XLS, XLSX, PNG, JPG, JPEG)",
+        type=['pdf', 'docx', 'txt', 'pptx', 'csv', 'xls', 'xlsx', 'png', 'jpg', 'jpeg'],
         accept_multiple_files=True
     )
     
     if uploaded_files:
         for file in uploaded_files:
             if file not in [doc['file'] for doc in st.session_state.uploaded_documents]:
-                text = extract_text_from_file(file)
-                if text:
+                file_extension = Path(file.name).suffix.lower()
+                
+                # Handle image files differently
+                if file_extension in ['.png', '.jpg', '.jpeg']:
+                    # Analyze image content
+                    image_analysis = analyze_image(file)
+                    
                     st.session_state.uploaded_documents.append({
                         'file': file,
                         'name': file.name,
-                        'content': text
+                        'content': f"[Image Analysis: {image_analysis}]" if image_analysis else f"[Image File: {file.name}]",
+                        'is_image': True,
+                        'image_analysis': image_analysis
                     })
-                    st.success(f"Successfully processed {file.name}")
+                    st.success(f"Successfully uploaded and analyzed image {file.name}")
+                else:
+                    text = extract_text_from_file(file)
+                    if text:
+                        st.session_state.uploaded_documents.append({
+                            'file': file,
+                            'name': file.name,
+                            'content': text,
+                            'is_image': False
+                        })
+                        st.success(f"Successfully processed {file.name}")
     
     # Search and document management section
     if st.session_state.uploaded_documents:
@@ -401,23 +419,29 @@ if st.session_state.registered:
             for i, doc in enumerate(filtered_docs):
                 cols = st.columns([4, 1])
                 with cols[0].expander(doc['name']):
-                    # Highlight search terms in content
-                    content = doc['content']
-                    if st.session_state.search_query:
-                        query = st.session_state.search_query.lower()
-                        start = content.lower().find(query)
-                        if start != -1:
-                            end = start + len(query)
-                            highlighted = (
-                                content[:start] +
-                                f"**{content[start:end]}**" +
-                                content[end:]
-                            )
-                            st.markdown(highlighted)
+                    if doc.get('is_image', False):
+                        st.image(doc['file'], caption=doc['name'])
+                        if doc.get('image_analysis'):
+                            st.markdown("**Image Analysis:**")
+                            st.markdown(doc['image_analysis'])
+                    else:
+                        # Highlight search terms in content
+                        content = doc['content']
+                        if st.session_state.search_query:
+                            query = st.session_state.search_query.lower()
+                            start = content.lower().find(query)
+                            if start != -1:
+                                end = start + len(query)
+                                highlighted = (
+                                    content[:start] +
+                                    f"**{content[start:end]}**" +
+                                    content[end:]
+                                )
+                                st.markdown(highlighted)
+                            else:
+                                st.text(content[:500] + "..." if len(content) > 500 else content)
                         else:
                             st.text(content[:500] + "..." if len(content) > 500 else content)
-                    else:
-                        st.text(content[:500] + "..." if len(content) > 500 else content)
                 
                 # Delete button with confirmation
                 if cols[1].button("🗑️", key=f"delete_{i}"):
@@ -626,3 +650,34 @@ def track_completion(completed):
     }
     st.session_state.completion_data.append(completion_entry)
     save_to_csv(completion_entry, COMPLETION_DATA_PATH)
+
+def encode_image_to_base64(file):
+    """Convert uploaded image file to base64 string"""
+    return base64.b64encode(file.getvalue()).decode('utf-8')
+
+def analyze_image(file):
+    """Analyze image content using OpenAI's GPT-4 Vision model"""
+    try:
+        base64_image = encode_image_to_base64(file)
+        
+        response = client.chat.completions.create(
+            model="gpt-4-vision-preview",
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "Please analyze this image in the context of accounting, finance, or business studies. Describe any relevant equations, problems, charts, or concepts shown."},
+                        {
+                            "type": "image_url",
+                            "image_url": f"data:image/jpeg;base64,{base64_image}"
+                        }
+                    ]
+                }
+            ],
+            max_tokens=300
+        )
+        
+        return response.choices[0].message.content
+    except Exception as e:
+        st.error(f"Error analyzing image: {str(e)}")
+        return None
