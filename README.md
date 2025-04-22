@@ -19,25 +19,75 @@ NuAnswers is an intelligent tutoring bot developed by Beta Alpha Psi: Nu Sigma C
   - PowerPoint presentations (PPTX)
   - Excel spreadsheets (XLS, XLSX)
   - CSV files
+  - Images (PNG, JPG, JPEG) with AI-powered analysis
+- Intelligent image analysis for:
+  - Screenshots of problems or equations
+  - Charts and graphs
+  - Handwritten notes
+  - Financial statements
+  - Business diagrams
 - Search within uploaded documents
 - Manage and reorder documents
 - Context-aware tutoring based on uploaded materials
+
+### 🤖 AI-Powered Features
+- Intelligent tutoring with step-by-step guidance
+- Image analysis using GPT-4 Vision
+- Natural language understanding
+- Context-aware responses
+- Personalized learning experience
 
 ### ⏰ Smart Availability
 - Automatically manages access based on in-person tutoring hours
 - Encourages in-person tutoring during scheduled sessions
 - Available 24/7 outside of tutoring hours
 
-### 📊 Usage Tracking
-- Records student usage statistics
-- Tracks session duration
-- Maintains user registration data
+### 📊 Advanced Analytics Dashboard
+#### Overview Metrics
+- Total registrations and unique students
+- Total and average usage time
+- Return user analysis and retention rates
+
+#### Time-Based Analytics
+- Daily and weekly usage patterns
+- Peak usage times heatmap
+- Session duration analysis
+- Hourly distribution of activity
+
+#### Academic Performance Metrics
+- Grade level progression analysis
+- Major and course distribution
+- Cross-analysis of academic factors
+- Professor engagement statistics
+
+#### User Engagement Metrics
+- Session frequency patterns
+- Time between sessions analysis
+- Return user behavior
+- User retention statistics
+
+#### Document Analytics
+- File type distribution
+- Documents per student
+- Upload patterns and trends
+
+#### Chat Interaction Analysis
+- Message statistics and patterns
+- Average message length
+- User engagement metrics
+- Interaction frequency
+
+#### Enhanced Filtering and Export
+- Multi-dimensional data filtering
+- Date range selection
+- Major and campus filtering
+- Export to CSV and Excel formats
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 - Python 3.9 or higher
-- OpenAI API key
+- OpenAI API key (with GPT-4 Vision access)
 - Streamlit account (for deployment)
 
 ### Installation
@@ -56,7 +106,7 @@ pip install -r requirements.txt
 3. Set up environment variables:
 - Create a `.streamlit/secrets.toml` file:
 ```toml
-OPENAI_API_KEY = "your-api-key-here"
+OPENAI_API_KEY = "your-api-key-here" # Must have GPT-4 Vision access
 ADMIN_PASSWORD = "your-admin-password-here"
 ```
 
@@ -73,9 +123,21 @@ streamlit run streamlit_app.py
 3. Add environment variables:
    - `OPENAI_API_KEY`
    - `ADMIN_PASSWORD`
-4. Deploy the service
+4. Configure HTTPS:
+   - Render automatically provides SSL/TLS certificates
+   - Wait a few minutes after deployment for the certificate to be issued
+   - Access the app using `https://` instead of `http://`
+   - If you see a certificate warning, wait a few minutes and refresh
+5. Deploy the service
 
-## 🔧 Configuration
+## �� Configuration
+
+### File Upload Limits
+- Maximum file size: 200MB
+- Supported formats: 
+  - Documents: PDF, DOCX, TXT, PPTX, CSV, XLS, XLSX
+  - Images: PNG, JPG, JPEG
+  - Image analysis is automatic for supported image formats
 
 ### Tutoring Hours
 Modify the `TUTORING_HOURS` dictionary in `streamlit_app.py`:
@@ -89,25 +151,27 @@ TUTORING_HOURS = {
 }
 ```
 
-### File Upload Limits
-- Maximum file size: 200MB
-- Supported formats: PDF, DOCX, TXT, PPTX, CSV, XLS, XLSX
-
 ## 👥 User Types
 
 ### Students
 - Complete registration form
-- Upload course materials
+- Upload course materials and images
+- Get AI analysis of uploaded images
 - Interact with the tutoring bot
 - Search and manage uploaded documents
 
 ### Administrators
-- Access usage statistics
-- Download registration data
-- Monitor student interactions
+- Access comprehensive usage statistics
+- Monitor real-time engagement metrics
+- Track academic performance patterns
+- Analyze user behavior and retention
+- View document and image upload statistics
+- Export detailed analytics reports
+- Filter and customize data views
+- Monitor chat interaction patterns
 
 ## 📝 Registration Data
-The system collects:
+The system collects and analyzes:
 - Full Name
 - Student ID
 - Email
@@ -116,12 +180,21 @@ The system collects:
 - Major
 - Course Information
 - Usage Statistics
+- Session Patterns
+- Document Upload History
+- Image Analysis Data
+- Chat Interaction Data
 
 ## 🔒 Security Features
 - Password-protected admin access
 - Secure API key management
 - User data encryption
 - Session management
+- HTTPS encryption
+- Strict Transport Security (HSTS)
+- Secure cookie handling
+- Input validation and sanitization
+- Secure image processing
 
 ## 🤝 Contributing
 We welcome contributions! Please feel free to submit pull requests.
@@ -131,5 +204,28 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 🙏 Acknowledgments
 - Beta Alpha Psi: Nu Sigma Chapter
-- OpenAI for GPT API
+- OpenAI for GPT API and GPT-4 Vision
 - Streamlit for the web framework
+
+## 🔐 Troubleshooting
+
+### Image Upload Issues
+If you experience issues with image uploads:
+1. Ensure the image is in a supported format (PNG, JPG, JPEG)
+2. Check that the file size is within limits
+3. Verify your internet connection is stable
+4. Make sure your OpenAI API key has GPT-4 Vision access
+5. Try converting the image to a different supported format
+
+### SSL/HTTPS Issues
+If you see a certificate warning:
+1. Make sure you're using `https://` in the URL
+2. Wait a few minutes after deployment for the certificate to be issued
+3. Clear your browser cache and refresh
+4. If the issue persists, contact Render support
+
+### Security Best Practices
+1. Always use HTTPS when accessing the application
+2. Keep your API keys secure and never share them
+3. Regularly update your admin password
+4. Monitor the application logs for any suspicious activity
