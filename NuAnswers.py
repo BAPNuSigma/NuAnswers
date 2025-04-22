@@ -61,13 +61,22 @@ def is_within_tutoring_hours():
     """Check if current time is within tutoring hours."""
     current_time = datetime.datetime.now()
     current_day = current_time.strftime("%A")
-    current_time_str = current_time.strftime("%H:%M")
+    current_hour = current_time.hour
+    current_minute = current_time.minute
+    current_time_float = current_hour + (current_minute / 60)
     
     if current_day not in TUTORING_HOURS:
         return False
         
-    for start_time, end_time in TUTORING_HOURS[current_day]:
-        if start_time <= current_time_str <= end_time:
+    for start_time_str, end_time_str in TUTORING_HOURS[current_day]:
+        # Convert time strings to float hours (e.g., "13:30" -> 13.5)
+        start_hour, start_minute = map(int, start_time_str.split(":"))
+        end_hour, end_minute = map(int, end_time_str.split(":"))
+        
+        start_time_float = start_hour + (start_minute / 60)
+        end_time_float = end_hour + (end_minute / 60)
+        
+        if start_time_float <= current_time_float <= end_time_float:
             return True
     return False
 
