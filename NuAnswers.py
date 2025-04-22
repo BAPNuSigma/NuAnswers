@@ -91,14 +91,12 @@ def is_within_tutoring_hours():
             "tutoring_start": f"{start_hour:02d}:{start_minute:02d}",
             "tutoring_end": f"{end_hour:02d}:{end_minute:02d}",
             "start_time_float": start_time_float,
-            "end_time_float": end_time_float
+            "end_time_float": end_time_float,
+            "is_within": current_time_float >= start_time_float and current_time_float <= end_time_float
         })
         
         # Check if current time is within the tutoring slot
-        is_within = start_time_float <= current_time_float <= end_time_float
-        st.session_state.debug_time["is_within"] = is_within
-        
-        if is_within:
+        if current_time_float >= start_time_float and current_time_float <= end_time_float:
             return True
     return False
 
