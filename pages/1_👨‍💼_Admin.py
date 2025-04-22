@@ -129,49 +129,48 @@ try:
     topic_df = load_data(TOPIC_DATA_PATH)
     completion_df = load_data(COMPLETION_DATA_PATH)
     
-    if df.empty and feedback_df.empty and topic_df.empty and completion_df.empty:
-        st.info("No data available yet.")
-        st.stop()
-    
-    # Convert timestamp columns to datetime
-    if not df.empty:
-        df['timestamp'] = pd.to_datetime(df['timestamp'])
-    if not feedback_df.empty:
-        feedback_df['timestamp'] = pd.to_datetime(feedback_df['timestamp'])
-    if not topic_df.empty:
-        topic_df['timestamp'] = pd.to_datetime(topic_df['timestamp'])
-    if not completion_df.empty:
-        completion_df['timestamp'] = pd.to_datetime(completion_df['timestamp'])
-        
     # Add download section at the top
     create_download_section()
     
     # Overview metrics
+    st.subheader("📊 Overview Metrics")
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        st.metric("Total Registrations", len(df))
+        st.metric("Total Registrations", len(df) if not df.empty else 0)
     with col2:
-        st.metric("Total Usage Time (hrs)", f"{df['usage_time_minutes'].sum() / 60:.1f}")
+        total_usage = df['usage_time_minutes'].sum() if not df.empty else 0
+        st.metric("Total Usage Time (hrs)", f"{total_usage / 60:.1f}")
     with col3:
-        st.metric("Avg. Session Length (min)", f"{df['usage_time_minutes'].mean():.1f}")
+        avg_session = df['usage_time_minutes'].mean() if not df.empty else 0
+        st.metric("Avg. Session Length (min)", f"{avg_session:.1f}")
     with col4:
-        st.metric("Unique Students", df['student_id'].nunique())
+        unique_students = df['student_id'].nunique() if not df.empty else 0
+        st.metric("Unique Students", unique_students)
     
     # Return User Analysis
     st.subheader("🔄 Return User Analysis")
-    user_sessions = df.groupby('student_id').size()
-    return_users = (user_sessions > 1).sum()
-    total_users = len(user_sessions)
-    
     col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Return Users", return_users)
-    with col2:
-        st.metric("Return Rate", f"{(return_users/total_users)*100:.1f}%")
-    with col3:
+    
+    if not df.empty:
+        user_sessions = df.groupby('student_id').size()
+        return_users = (user_sessions > 1).sum()
+        total_users = len(user_sessions)
         avg_sessions = user_sessions.mean()
-        st.metric("Avg Sessions per User", f"{avg_sessions:.1f}")
+        
+        with col1:
+            st.metric("Return Users", return_users)
+        with col2:
+            st.metric("Return Rate", f"{(return_users/total_users)*100:.1f}%")
+        with col3:
+            st.metric("Avg Sessions per User", f"{avg_sessions:.1f}")
+    else:
+        with col1:
+            st.metric("Return Users", 0)
+        with col2:
+            st.metric("Return Rate", "0.0%")
+        with col3:
+            st.metric("Avg Sessions per User", "0.0")
     
     # Time-based Analysis
     st.subheader("📈 Usage Trends")
@@ -179,59 +178,66 @@ try:
     tab1, tab2, tab3 = st.tabs(["Daily Stats", "Weekly Patterns", "Hourly Distribution"])
     
     with tab1:
-        # Daily registration trend
-        daily_stats = df.groupby(df['timestamp'].dt.date).agg({
-            'student_id': 'count',
-            'usage_time_minutes': ['sum', 'mean']
-        }).reset_index()
-        daily_stats.columns = ['Date', 'Registrations', 'Total Minutes', 'Avg Minutes']
-        
-        fig_daily = px.line(daily_stats, x='Date', y=['Registrations', 'Avg Minutes'],
-                           title='Daily Registration and Usage Trends')
-        st.plotly_chart(fig_daily, use_container_width=True)
+        if not df.empty:
+            df['timestamp'] = pd.to_datetime(df['timestamp'])
+            daily_stats = df.groupby(df['timestamp'].dt.date).agg({
+                'student_id': 'count',
+                'usage_time_minutes': ['sum', 'mean']
+            }).reset_index()
+            daily_stats.columns = ['Date', 'Registrations', 'Total Minutes', 'Avg Minutes']
+            
+            fig_daily = px.line(daily_stats, x='Date', y=['Registrations', 'Avg Minutes'],
+                               title='Daily Registration and Usage Trends')
+            st.plotly_chart(fig_daily, use_container_width=True)
+        else:
+            st.info("No daily statistics available yet.")
     
     with tab2:
-        # Weekly patterns
-        df['day_of_week'] = df['timestamp'].dt.day_name()
-        weekly_stats = df.groupby('day_of_week').agg({
-            'student_id': 'count',
-            'usage_time_minutes': 'mean'
-        })
-        
-        # Ensure proper day order
-        day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-        weekly_stats = weekly_stats.reindex(day_order)
-        
-        fig_weekly = go.Figure()
-        fig_weekly.add_trace(go.Bar(
-            x=weekly_stats.index,
-            y=weekly_stats['student_id'],
-            name='Number of Sessions'
-        ))
-        fig_weekly.add_trace(go.Scatter(
-            x=weekly_stats.index,
-            y=weekly_stats['usage_time_minutes'],
-            name='Avg Session Length (min)',
-            yaxis='y2'
-        ))
-        fig_weekly.update_layout(
-            title='Weekly Usage Patterns',
-            yaxis2=dict(
-                title='Avg Session Length (min)',
-                overlaying='y',
-                side='right'
+        if not df.empty:
+            df['day_of_week'] = df['timestamp'].dt.day_name()
+            weekly_stats = df.groupby('day_of_week').agg({
+                'student_id': 'count',
+                'usage_time_minutes': 'mean'
+            })
+            
+            # Ensure proper day order
+            day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+            weekly_stats = weekly_stats.reindex(day_order)
+            
+            fig_weekly = go.Figure()
+            fig_weekly.add_trace(go.Bar(
+                x=weekly_stats.index,
+                y=weekly_stats['student_id'],
+                name='Number of Sessions'
+            ))
+            fig_weekly.add_trace(go.Scatter(
+                x=weekly_stats.index,
+                y=weekly_stats['usage_time_minutes'],
+                name='Avg Session Length (min)',
+                yaxis='y2'
+            ))
+            fig_weekly.update_layout(
+                title='Weekly Usage Patterns',
+                yaxis2=dict(
+                    title='Avg Session Length (min)',
+                    overlaying='y',
+                    side='right'
+                )
             )
-        )
-        st.plotly_chart(fig_weekly, use_container_width=True)
-        
+            st.plotly_chart(fig_weekly, use_container_width=True)
+        else:
+            st.info("No weekly patterns available yet.")
+    
     with tab3:
-        # Hourly distribution
-        hourly_dist = df.groupby(df['timestamp'].dt.hour)['student_id'].count().reset_index()
-        hourly_dist.columns = ['Hour', 'Count']
-        
-        fig_hourly = px.bar(hourly_dist, x='Hour', y='Count',
-                           title='Usage Distribution by Hour of Day')
-        st.plotly_chart(fig_hourly, use_container_width=True)
+        if not df.empty:
+            hourly_dist = df.groupby(df['timestamp'].dt.hour)['student_id'].count().reset_index()
+            hourly_dist.columns = ['Hour', 'Count']
+            
+            fig_hourly = px.bar(hourly_dist, x='Hour', y='Count',
+                               title='Usage Distribution by Hour of Day')
+            st.plotly_chart(fig_hourly, use_container_width=True)
+        else:
+            st.info("No hourly distribution data available yet.")
     
     # Time-Based Performance
     st.subheader("⏰ Time-Based Performance")
@@ -277,24 +283,27 @@ try:
     # Academic Performance Metrics
     st.subheader("📊 Academic Performance")
     
-    # Grade level progression
-    grade_order = ['Freshman', 'Sophomore', 'Junior', 'Senior', 'Graduate']
-    grade_usage = df.groupby(['grade', 'major']).agg({
-        'student_id': 'count',
-        'usage_time_minutes': 'mean'
-    }).reset_index()
-    
-    fig_grade_usage = px.scatter(grade_usage, 
-                                x='grade', 
-                                y='usage_time_minutes',
-                                size='student_id',
-                                color='major',
-                                category_orders={'grade': grade_order},
-                                title='Usage Patterns by Grade Level and Major',
-                                labels={'grade': 'Grade Level', 
-                                       'usage_time_minutes': 'Average Session Duration (min)',
-                                       'student_id': 'Number of Sessions'})
-    st.plotly_chart(fig_grade_usage, use_container_width=True)
+    if not df.empty:
+        # Grade level progression
+        grade_order = ['Freshman', 'Sophomore', 'Junior', 'Senior', 'Graduate']
+        grade_usage = df.groupby(['grade', 'major']).agg({
+            'student_id': 'count',
+            'usage_time_minutes': 'mean'
+        }).reset_index()
+        
+        fig_grade_usage = px.scatter(grade_usage, 
+                                    x='grade', 
+                                    y='usage_time_minutes',
+                                    size='student_id',
+                                    color='major',
+                                    category_orders={'grade': grade_order},
+                                    title='Usage Patterns by Grade Level and Major',
+                                    labels={'grade': 'Grade Level', 
+                                           'usage_time_minutes': 'Average Session Duration (min)',
+                                           'student_id': 'Number of Sessions'})
+        st.plotly_chart(fig_grade_usage, use_container_width=True)
+    else:
+        st.info("No academic performance data available yet.")
     
     # Course success metrics
     st.subheader("📊 Course Success Metrics")
@@ -660,4 +669,5 @@ try:
         )
 
 except Exception as e:
-    st.error(f"Error loading or processing data: {str(e)}") 
+    st.error(f"Error loading or processing data: {str(e)}")
+    st.info("Some dashboard features may be limited until data becomes available.") 
