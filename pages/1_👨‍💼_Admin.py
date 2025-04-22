@@ -668,6 +668,120 @@ try:
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
+    # Add Data Management Section at the end
+    st.divider()
+    st.subheader("⚠️ Data Management")
+    st.warning("Warning: These actions cannot be undone!")
+
+    data_mgmt_col1, data_mgmt_col2 = st.columns(2)
+
+    with data_mgmt_col1:
+        st.subheader("Clear Individual Data")
+        
+        # Clear Registration Data
+        if st.button("🗑️ Clear Registration Data"):
+            st.session_state.confirm_clear_registration = True
+            
+        if "confirm_clear_registration" in st.session_state and st.session_state.confirm_clear_registration:
+            st.warning("Are you sure you want to clear all registration data?")
+            col1, col2 = st.columns(2)
+            if col1.button("Yes, Clear Registration Data", key="confirm_reg"):
+                try:
+                    if REGISTRATION_DATA_PATH.exists():
+                        REGISTRATION_DATA_PATH.unlink()
+                    st.success("Registration data cleared successfully!")
+                except Exception as e:
+                    st.error(f"Error clearing registration data: {str(e)}")
+                st.session_state.confirm_clear_registration = False
+                st.rerun()
+            if col2.button("Cancel", key="cancel_reg"):
+                st.session_state.confirm_clear_registration = False
+                st.rerun()
+        
+        # Clear Feedback Data
+        if st.button("🗑️ Clear Feedback Data"):
+            st.session_state.confirm_clear_feedback = True
+            
+        if "confirm_clear_feedback" in st.session_state and st.session_state.confirm_clear_feedback:
+            st.warning("Are you sure you want to clear all feedback data?")
+            col1, col2 = st.columns(2)
+            if col1.button("Yes, Clear Feedback Data", key="confirm_feed"):
+                try:
+                    if FEEDBACK_DATA_PATH.exists():
+                        FEEDBACK_DATA_PATH.unlink()
+                    st.success("Feedback data cleared successfully!")
+                except Exception as e:
+                    st.error(f"Error clearing feedback data: {str(e)}")
+                st.session_state.confirm_clear_feedback = False
+                st.rerun()
+            if col2.button("Cancel", key="cancel_feed"):
+                st.session_state.confirm_clear_feedback = False
+                st.rerun()
+        
+        # Clear Topic Data
+        if st.button("🗑️ Clear Topic Data"):
+            st.session_state.confirm_clear_topic = True
+            
+        if "confirm_clear_topic" in st.session_state and st.session_state.confirm_clear_topic:
+            st.warning("Are you sure you want to clear all topic data?")
+            col1, col2 = st.columns(2)
+            if col1.button("Yes, Clear Topic Data", key="confirm_topic"):
+                try:
+                    if TOPIC_DATA_PATH.exists():
+                        TOPIC_DATA_PATH.unlink()
+                    st.success("Topic data cleared successfully!")
+                except Exception as e:
+                    st.error(f"Error clearing topic data: {str(e)}")
+                st.session_state.confirm_clear_topic = False
+                st.rerun()
+            if col2.button("Cancel", key="cancel_topic"):
+                st.session_state.confirm_clear_topic = False
+                st.rerun()
+                
+        # Clear Completion Data
+        if st.button("🗑️ Clear Completion Data"):
+            st.session_state.confirm_clear_completion = True
+            
+        if "confirm_clear_completion" in st.session_state and st.session_state.confirm_clear_completion:
+            st.warning("Are you sure you want to clear all completion data?")
+            col1, col2 = st.columns(2)
+            if col1.button("Yes, Clear Completion Data", key="confirm_comp"):
+                try:
+                    if COMPLETION_DATA_PATH.exists():
+                        COMPLETION_DATA_PATH.unlink()
+                    st.success("Completion data cleared successfully!")
+                except Exception as e:
+                    st.error(f"Error clearing completion data: {str(e)}")
+                st.session_state.confirm_clear_completion = False
+                st.rerun()
+            if col2.button("Cancel", key="cancel_comp"):
+                st.session_state.confirm_clear_completion = False
+                st.rerun()
+
+    with data_mgmt_col2:
+        st.subheader("Clear All Data")
+        
+        if st.button("🗑️ Clear All Data", type="primary"):
+            st.session_state.confirm_clear_all = True
+            
+        if "confirm_clear_all" in st.session_state and st.session_state.confirm_clear_all:
+            st.error("⚠️ Are you absolutely sure you want to clear ALL data? This action cannot be undone!")
+            col1, col2 = st.columns(2)
+            if col1.button("Yes, Clear ALL Data", key="confirm_all"):
+                try:
+                    # Clear all data files
+                    for path in [REGISTRATION_DATA_PATH, FEEDBACK_DATA_PATH, TOPIC_DATA_PATH, COMPLETION_DATA_PATH]:
+                        if path.exists():
+                            path.unlink()
+                    st.success("All data cleared successfully!")
+                except Exception as e:
+                    st.error(f"Error clearing all data: {str(e)}")
+                st.session_state.confirm_clear_all = False
+                st.rerun()
+            if col2.button("Cancel", key="cancel_all"):
+                st.session_state.confirm_clear_all = False
+                st.rerun()
+
 except Exception as e:
     st.error(f"Error loading or processing data: {str(e)}")
     st.info("Some dashboard features may be limited until data becomes available.") 
