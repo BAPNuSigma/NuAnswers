@@ -158,8 +158,23 @@ if not st.session_state.registered:
     
     with st.form("registration_form", clear_on_submit=False):
         full_name = st.text_input("Full Name")
-        student_id = st.text_input("FDU Student ID")
-        email = st.text_input("FDU Student Email")
+        student_id = st.text_input("FDU Student ID (7 digits)")
+        
+        # Validate student ID format
+        is_valid_student_id = student_id.isdigit() and len(student_id) == 7
+        if student_id and not is_valid_student_id:
+            st.error("FDU Student ID must be exactly 7 digits.")
+            
+        email = st.text_input("FDU Student Email (@student.fdu.edu or @fdu.edu)")
+        
+        # Validate email domain
+        is_valid_email = False
+        if email:
+            email = email.lower()
+            is_valid_email = email.endswith('@student.fdu.edu') or email.endswith('@fdu.edu')
+            if not is_valid_email:
+                st.error("Please use your FDU email address (@student.fdu.edu or @fdu.edu)")
+        
         grade = st.selectbox("Grade", ["Freshman", "Sophomore", "Junior", "Senior", "Graduate"])
         campus = st.selectbox("Campus", ["Florham", "Metro", "Vancouver"])
         
@@ -179,6 +194,10 @@ if not st.session_state.registered:
         if submitted:
             if not all([full_name, student_id, email, course_id, professor]):
                 st.error("Please fill in all required fields.")
+            elif not is_valid_student_id:
+                st.error("Please enter a valid 7-digit FDU Student ID.")
+            elif not is_valid_email:
+                st.error("Please enter a valid FDU email address.")
             else:
                 # Save user data
                 st.session_state.user_data = {
