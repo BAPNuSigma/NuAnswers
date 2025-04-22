@@ -150,19 +150,19 @@ if not st.session_state.registered:
     st.title("📝 Registration Form")
     st.write("Please complete the registration form to use NuAnswers.")
     
+    # Major selection outside the form
+    major = st.selectbox(
+        "Major",
+        ["Accounting", "Finance", "MIS [Management Information Systems]"],
+        key="major"
+    )
+    
     with st.form("registration_form", clear_on_submit=False):
         full_name = st.text_input("Full Name")
         student_id = st.text_input("FDU Student ID")
         email = st.text_input("FDU Student Email")
         grade = st.selectbox("Grade", ["Freshman", "Sophomore", "Junior", "Senior", "Graduate"])
         campus = st.selectbox("Campus", ["Florham", "Metro", "Vancouver"])
-        
-        # Major selection without callback
-        major = st.selectbox(
-            "Major",
-            ["Accounting", "Finance", "MIS [Management Information Systems]"],
-            key="major"
-        )
         
         # Course name input based on major
         major_prefix = major.split('[')[0].strip()
