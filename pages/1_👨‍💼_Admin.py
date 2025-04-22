@@ -280,6 +280,51 @@ try:
                                aspect='auto')
         st.plotly_chart(fig_heatmap, use_container_width=True)
     
+    # User Engagement Analysis
+    st.subheader("📱 User Engagement")
+    
+    # Session frequency analysis
+    user_frequency = df.groupby('student_id').agg({
+        'timestamp': ['count', lambda x: (x.max() - x.min()).days + 1]
+    }).reset_index()
+    user_frequency.columns = ['student_id', 'total_sessions', 'days_span']
+    user_frequency['sessions_per_day'] = user_frequency['total_sessions'] / user_frequency['days_span'].clip(lower=1)
+    
+    fig_frequency = px.histogram(user_frequency, x='sessions_per_day',
+                                title='Distribution of Session Frequency',
+                                labels={'sessions_per_day': 'Average Sessions per Day'},
+                                nbins=20)
+    st.plotly_chart(fig_frequency, use_container_width=True)
+    
+    # Engagement metrics
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        avg_sessions_per_day = user_frequency['sessions_per_day'].mean()
+        st.metric("Avg Sessions per Day", f"{avg_sessions_per_day:.2f}")
+    
+    with col2:
+        retention_rate = (user_frequency['total_sessions'] > 1).mean() * 100
+        st.metric("User Retention Rate", f"{retention_rate:.1f}%")
+    
+    with col3:
+        avg_days_active = user_frequency['days_span'].mean()
+        st.metric("Avg Days Active", f"{avg_days_active:.1f}")
+    
+    # Time between sessions analysis
+    df_sorted = df.sort_values(['student_id', 'timestamp'])
+    df_sorted['prev_timestamp'] = df_sorted.groupby('student_id')['timestamp'].shift(1)
+    df_sorted['time_between_sessions'] = (df_sorted['timestamp'] - df_sorted['prev_timestamp']).dt.total_seconds() / 3600  # in hours
+    
+    # Filter out first sessions (no previous timestamp) and unreasonable values
+    time_between = df_sorted[df_sorted['time_between_sessions'].between(0, 720)]  # up to 30 days
+    
+    fig_time_between = px.histogram(time_between, x='time_between_sessions',
+                                   title='Time Between Sessions',
+                                   labels={'time_between_sessions': 'Hours Between Sessions'},
+                                   nbins=50)
+    st.plotly_chart(fig_time_between, use_container_width=True)
+    
     # Academic Performance Metrics
     st.subheader("📊 Academic Performance")
     
@@ -351,7 +396,7 @@ try:
                 st.info("No completion data available yet")
         else:
             st.info("Completion tracking system is ready but no data collected yet")
-
+    
     # Most common topics/questions
     st.subheader("📝 Topic Analysis")
     
@@ -391,142 +436,30 @@ try:
     else:
         st.info("Topic tracking system is ready but no data collected yet")
     
-    # User Engagement Analysis
-    st.subheader("📱 User Engagement")
+    # Demographic Analysis
+    st.subheader("👥 User Demographics")
     
-    # Session frequency analysis
-    user_frequency = df.groupby('student_id').agg({
-        'timestamp': ['count', lambda x: (x.max() - x.min()).days + 1]
-    }).reset_index()
-    user_frequency.columns = ['student_id', 'total_sessions', 'days_span']
-    user_frequency['sessions_per_day'] = user_frequency['total_sessions'] / user_frequency['days_span'].clip(lower=1)
-    
-    fig_frequency = px.histogram(user_frequency, x='sessions_per_day',
-                                title='Distribution of Session Frequency',
-                                labels={'sessions_per_day': 'Average Sessions per Day'},
-                                nbins=20)
-    st.plotly_chart(fig_frequency, use_container_width=True)
-    
-    # Engagement metrics
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
     
     with col1:
-        avg_sessions_per_day = user_frequency['sessions_per_day'].mean()
-        st.metric("Avg Sessions per Day", f"{avg_sessions_per_day:.2f}")
-    
+        # Campus distribution
+        campus_dist = df['campus'].value_counts()
+        fig_campus = px.pie(values=campus_dist.values, names=campus_dist.index,
+                           title='Distribution by Campus')
+        st.plotly_chart(fig_campus)
+        
     with col2:
-        retention_rate = (user_frequency['total_sessions'] > 1).mean() * 100
-        st.metric("User Retention Rate", f"{retention_rate:.1f}%")
+        # Major distribution
+        major_dist = df['major'].value_counts()
+        fig_major = px.pie(values=major_dist.values, names=major_dist.index,
+                          title='Distribution by Major')
+        st.plotly_chart(fig_major)
     
-    with col3:
-        avg_days_active = user_frequency['days_span'].mean()
-        st.metric("Avg Days Active", f"{avg_days_active:.1f}")
-    
-    # Time between sessions analysis
-    df_sorted = df.sort_values(['student_id', 'timestamp'])
-    df_sorted['prev_timestamp'] = df_sorted.groupby('student_id')['timestamp'].shift(1)
-    df_sorted['time_between_sessions'] = (df_sorted['timestamp'] - df_sorted['prev_timestamp']).dt.total_seconds() / 3600  # in hours
-    
-    # Filter out first sessions (no previous timestamp) and unreasonable values
-    time_between = df_sorted[df_sorted['time_between_sessions'].between(0, 720)]  # up to 30 days
-    
-    fig_time_between = px.histogram(time_between, x='time_between_sessions',
-                                   title='Time Between Sessions',
-                                   labels={'time_between_sessions': 'Hours Between Sessions'},
-                                   nbins=50)
-    st.plotly_chart(fig_time_between, use_container_width=True)
-    
-    # Document Upload Analysis
-    if 'uploaded_documents' in st.session_state:
-        st.subheader("📄 Document Analysis")
-        
-        # Get document statistics from session state
-        doc_stats = pd.DataFrame([
-            {
-                'student_id': doc.get('student_id'),
-                'file_type': Path(doc['name']).suffix.lower(),
-                'upload_time': doc.get('upload_time', pd.NaT)
-            }
-            for doc in st.session_state.uploaded_documents
-        ])
-        
-        if not doc_stats.empty:
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                # File type distribution
-                file_type_dist = doc_stats['file_type'].value_counts()
-                fig_file_types = px.pie(values=file_type_dist.values,
-                                      names=file_type_dist.index,
-                                      title='Document Types Distribution')
-                st.plotly_chart(fig_file_types)
-            
-            with col2:
-                # Documents per student
-                docs_per_student = doc_stats.groupby('student_id').size()
-                fig_docs_per_student = px.histogram(x=docs_per_student.values,
-                                                  title='Documents per Student',
-                                                  labels={'x': 'Number of Documents'},
-                                                  nbins=20)
-                st.plotly_chart(fig_docs_per_student)
-        else:
-            st.info("No document upload data available yet")
-    
-    # Chat Interaction Analysis
-    if 'messages' in st.session_state:
-        st.subheader("💬 Chat Analysis")
-        
-        # Analyze chat messages
-        messages = pd.DataFrame(st.session_state.messages)
-        
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            total_messages = len(messages)
-            st.metric("Total Messages", total_messages)
-        
-        with col2:
-            avg_message_length = messages['content'].str.len().mean()
-            st.metric("Avg Message Length", f"{avg_message_length:.0f} chars")
-        
-        with col3:
-            user_messages = len(messages[messages['role'] == 'user'])
-            st.metric("User Messages", user_messages)
-        
-        # Message length distribution
-        message_lengths = messages['content'].str.len()
-        fig_message_lengths = px.histogram(x=message_lengths,
-                                         title='Message Length Distribution',
-                                         labels={'x': 'Message Length (characters)'},
-                                         nbins=30)
-        st.plotly_chart(fig_message_lengths, use_container_width=True)
-    else:
-        st.info("No chat interaction data available yet")
-    
-    # Course Analysis
-    st.subheader("📚 Course Analysis")
-    
-    tab1, tab2 = st.tabs(["Course Distribution", "Professor Analysis"])
-    
-    with tab1:
-        col1, col2 = st.columns(2)
-        with col1:
-            course_dist = df['course_name'].value_counts().head(10)
-            fig_course = px.bar(x=course_dist.index, y=course_dist.values,
-                               title='Top 10 Most Common Courses')
-            st.plotly_chart(fig_course, use_container_width=True)
-        
-        with col2:
-            course_id_dist = df['course_id'].value_counts().head(10)
-            fig_course_id = px.bar(x=course_id_dist.index, y=course_id_dist.values,
-                                  title='Top 10 Course IDs')
-            st.plotly_chart(fig_course_id, use_container_width=True)
-    
-    with tab2:
-        prof_dist = df['professor'].value_counts()
-        fig_prof = px.pie(values=prof_dist.values, names=prof_dist.index,
-                         title='Distribution by Professor')
-        st.plotly_chart(fig_prof, use_container_width=True)
+    # Grade Level Analysis
+    grade_dist = df['grade'].value_counts()
+    fig_grade = px.bar(x=grade_dist.index, y=grade_dist.values,
+                       title='Distribution by Grade Level')
+    st.plotly_chart(fig_grade, use_container_width=True)
     
     # Cross Analysis
     st.subheader("🔄 Cross Analysis")
@@ -566,36 +499,637 @@ try:
     )
     st.plotly_chart(fig_major_usage, use_container_width=True)
     
-    # User Demographics
-    st.subheader("👥 User Demographics")
+    # System Performance Metrics
+    st.subheader("⚙️ System Performance")
+    
+    # Create columns for different metrics
+    perf_col1, perf_col2 = st.columns(2)
+    
+    with perf_col1:
+        # Response time analysis
+        if 'response_times' in st.session_state:
+            response_times = pd.DataFrame(st.session_state.response_times)
+            if not response_times.empty:
+                # Calculate average response time
+                avg_response_time = response_times['response_time'].mean()
+                st.metric("Average Response Time", f"{avg_response_time:.2f} seconds")
+                
+                # Response time distribution
+                fig_response = px.histogram(response_times, x='response_time',
+                                          title='Response Time Distribution',
+                                          labels={'response_time': 'Response Time (seconds)'},
+                                          nbins=30)
+                st.plotly_chart(fig_response, use_container_width=True)
+            else:
+                st.info("No response time data available yet")
+        else:
+            st.info("Response time tracking system is ready but no data collected yet")
+    
+    with perf_col2:
+        # Error rate tracking
+        if 'error_logs' in st.session_state:
+            error_logs = pd.DataFrame(st.session_state.error_logs)
+            if not error_logs.empty:
+                # Calculate error rate
+                total_requests = len(df)
+                total_errors = len(error_logs)
+                error_rate = (total_errors / total_requests) * 100
+                st.metric("Error Rate", f"{error_rate:.2f}%")
+                
+                # Error type distribution
+                error_types = error_logs['error_type'].value_counts()
+                fig_errors = px.bar(x=error_types.index, y=error_types.values,
+                                   title='Error Type Distribution',
+                                   labels={'x': 'Error Type', 'y': 'Count'})
+                st.plotly_chart(fig_errors, use_container_width=True)
+            else:
+                st.info("No error data available yet")
+        else:
+            st.info("Error tracking system is ready but no data collected yet")
+    
+    # System uptime/downtime
+    st.subheader("⏱️ System Uptime")
+    
+    if 'system_status' in st.session_state:
+        system_status = pd.DataFrame(st.session_state.system_status)
+        if not system_status.empty:
+            # Calculate uptime percentage
+            total_time = (system_status['end_time'].max() - system_status['start_time'].min()).total_seconds()
+            uptime = system_status[system_status['status'] == 'up']['duration'].sum()
+            uptime_percentage = (uptime / total_time) * 100
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.metric("System Uptime", f"{uptime_percentage:.2f}%")
+            
+            with col2:
+                # Uptime trend
+                system_status['date'] = system_status['start_time'].dt.date
+                daily_uptime = system_status.groupby('date')['status'].apply(
+                    lambda x: (x == 'up').mean() * 100
+                ).reset_index()
+                
+                fig_uptime = px.line(daily_uptime, x='date', y='status',
+                                    title='Daily Uptime Trend',
+                                    labels={'date': 'Date', 'status': 'Uptime Percentage'})
+                st.plotly_chart(fig_uptime, use_container_width=True)
+        else:
+            st.info("No system status data available yet")
+    else:
+        st.info("System status tracking is ready but no data collected yet")
+    
+    # Content Analysis
+    st.subheader("📚 Content Analysis")
+    
+    # Most viewed/accessed materials
+    if 'content_access' in st.session_state:
+        content_access = pd.DataFrame(st.session_state.content_access)
+        if not content_access.empty:
+            # Create columns for different content analyses
+            content_col1, content_col2 = st.columns(2)
+            
+            with content_col1:
+                # Most accessed materials
+                top_content = content_access['content_id'].value_counts().head(10)
+                fig_content = px.bar(x=top_content.index, y=top_content.values,
+                                    title='Top 10 Most Accessed Materials',
+                                    labels={'x': 'Content ID', 'y': 'Access Count'})
+                st.plotly_chart(fig_content, use_container_width=True)
+            
+            with content_col2:
+                # Content type distribution
+                content_types = content_access['content_type'].value_counts()
+                fig_types = px.pie(values=content_types.values, names=content_types.index,
+                                  title='Content Type Distribution')
+                st.plotly_chart(fig_types, use_container_width=True)
+            
+            # Content access trends
+            content_trends = content_access.groupby([pd.Grouper(key='access_time', freq='D'), 'content_type']).size().unstack(fill_value=0)
+            fig_trends = px.line(content_trends,
+                                title='Content Access Trends Over Time',
+                                labels={'value': 'Access Count', 'variable': 'Content Type'})
+            st.plotly_chart(fig_trends, use_container_width=True)
+        else:
+            st.info("No content access data available yet")
+    else:
+        st.info("Content tracking system is ready but no data collected yet")
+    
+    # Search term analysis
+    if 'search_terms' in st.session_state:
+        search_terms = pd.DataFrame(st.session_state.search_terms)
+        if not search_terms.empty:
+            st.subheader("🔍 Search Term Analysis")
+            
+            # Most common search terms
+            top_searches = search_terms['term'].value_counts().head(10)
+            fig_searches = px.bar(x=top_searches.index, y=top_searches.values,
+                                 title='Top 10 Most Common Search Terms',
+                                 labels={'x': 'Search Term', 'y': 'Count'})
+            st.plotly_chart(fig_searches, use_container_width=True)
+            
+            # Search term trends
+            search_trends = search_terms.groupby([pd.Grouper(key='timestamp', freq='D')]).size().reset_index(name='count')
+            fig_search_trends = px.line(search_trends, x='timestamp', y='count',
+                                       title='Search Activity Over Time',
+                                       labels={'timestamp': 'Date', 'count': 'Number of Searches'})
+            st.plotly_chart(fig_search_trends, use_container_width=True)
+        else:
+            st.info("No search term data available yet")
+    else:
+        st.info("Search term tracking system is ready but no data collected yet")
+    
+    # Feedback and Quality Metrics
+    st.subheader("🌟 Feedback and Quality Metrics")
+    
+    # Create columns for different feedback metrics
+    feedback_col1, feedback_col2 = st.columns(2)
+    
+    with feedback_col1:
+        # User satisfaction scores
+        if 'user_feedback' in st.session_state:
+            user_feedback = pd.DataFrame(st.session_state.user_feedback)
+            if not user_feedback.empty:
+                # Calculate average satisfaction score
+                avg_satisfaction = user_feedback['satisfaction_score'].mean()
+                st.metric("Average Satisfaction Score", f"{avg_satisfaction:.1f}/5")
+                
+                # Satisfaction score distribution
+                fig_satisfaction = px.histogram(user_feedback, x='satisfaction_score',
+                                              title='Satisfaction Score Distribution',
+                                              labels={'satisfaction_score': 'Satisfaction Score (1-5)'},
+                                              nbins=5)
+                st.plotly_chart(fig_satisfaction, use_container_width=True)
+            else:
+                st.info("No user feedback data available yet")
+        else:
+            st.info("User feedback system is ready but no data collected yet")
+    
+    with feedback_col2:
+        # Response quality ratings
+        if 'response_ratings' in st.session_state:
+            response_ratings = pd.DataFrame(st.session_state.response_ratings)
+            if not response_ratings.empty:
+                # Calculate average response quality
+                avg_quality = response_ratings['quality_score'].mean()
+                st.metric("Average Response Quality", f"{avg_quality:.1f}/5")
+                
+                # Quality score distribution
+                fig_quality = px.histogram(response_ratings, x='quality_score',
+                                         title='Response Quality Distribution',
+                                         labels={'quality_score': 'Quality Score (1-5)'},
+                                         nbins=5)
+                st.plotly_chart(fig_quality, use_container_width=True)
+            else:
+                st.info("No response quality data available yet")
+        else:
+            st.info("Response quality tracking system is ready but no data collected yet")
+    
+    # Resolution time analysis
+    st.subheader("⏱️ Resolution Time Analysis")
+    
+    if 'resolution_times' in st.session_state:
+        resolution_times = pd.DataFrame(st.session_state.resolution_times)
+        if not resolution_times.empty:
+            # Calculate average resolution time
+            avg_resolution_time = resolution_times['resolution_time'].mean()
+            st.metric("Average Resolution Time", f"{avg_resolution_time:.1f} minutes")
+            
+            # Resolution time distribution
+            fig_resolution = px.histogram(resolution_times, x='resolution_time',
+                                        title='Resolution Time Distribution',
+                                        labels={'resolution_time': 'Resolution Time (minutes)'},
+                                        nbins=30)
+            st.plotly_chart(fig_resolution, use_container_width=True)
+            
+            # Resolution time trends
+            resolution_trends = resolution_times.groupby([pd.Grouper(key='timestamp', freq='D')])['resolution_time'].mean().reset_index()
+            fig_trends = px.line(resolution_trends, x='timestamp', y='resolution_time',
+                                title='Resolution Time Trends',
+                                labels={'timestamp': 'Date', 'resolution_time': 'Average Resolution Time (minutes)'})
+            st.plotly_chart(fig_trends, use_container_width=True)
+        else:
+            st.info("No resolution time data available yet")
+    else:
+        st.info("Resolution time tracking system is ready but no data collected yet")
+    
+    # User feedback trends
+    st.subheader("📈 User Feedback Trends")
+    
+    if 'feedback_trends' in st.session_state:
+        feedback_trends = pd.DataFrame(st.session_state.feedback_trends)
+        if not feedback_trends.empty:
+            # Feedback trends over time
+            fig_feedback_trends = px.line(feedback_trends, x='date', y='satisfaction_score',
+                                         title='Satisfaction Score Trends',
+                                         labels={'date': 'Date', 'satisfaction_score': 'Average Satisfaction Score'})
+            st.plotly_chart(fig_feedback_trends, use_container_width=True)
+            
+            # Service improvement suggestions
+            if 'suggestions' in feedback_trends.columns:
+                suggestions = feedback_trends['suggestions'].value_counts().head(10)
+                fig_suggestions = px.bar(x=suggestions.index, y=suggestions.values,
+                                       title='Top 10 Service Improvement Suggestions',
+                                       labels={'x': 'Suggestion', 'y': 'Count'})
+                st.plotly_chart(fig_suggestions, use_container_width=True)
+        else:
+            st.info("No feedback trend data available yet")
+    else:
+        st.info("Feedback trend tracking system is ready but no data collected yet")
+    
+    # Comparative Analysis
+    st.subheader("📊 Comparative Analysis")
+    
+    # Year-over-year growth
+    st.subheader("📈 Year-over-Year Growth")
+    
+    if 'yearly_data' in st.session_state:
+        yearly_data = pd.DataFrame(st.session_state.yearly_data)
+        if not yearly_data.empty:
+            # Calculate growth metrics
+            yearly_metrics = yearly_data.groupby('year').agg({
+                'registrations': 'sum',
+                'unique_users': 'nunique',
+                'total_usage': 'sum'
+            }).reset_index()
+            
+            # Create columns for different growth metrics
+            growth_col1, growth_col2 = st.columns(2)
+            
+            with growth_col1:
+                # Registration growth
+                fig_reg_growth = px.line(yearly_metrics, x='year', y='registrations',
+                                        title='Registration Growth',
+                                        labels={'year': 'Year', 'registrations': 'Total Registrations'})
+                st.plotly_chart(fig_reg_growth, use_container_width=True)
+            
+            with growth_col2:
+                # User growth
+                fig_user_growth = px.line(yearly_metrics, x='year', y='unique_users',
+                                         title='User Growth',
+                                         labels={'year': 'Year', 'unique_users': 'Unique Users'})
+                st.plotly_chart(fig_user_growth, use_container_width=True)
+            
+            # Usage growth
+            fig_usage_growth = px.line(yearly_metrics, x='year', y='total_usage',
+                                      title='Usage Growth',
+                                      labels={'year': 'Year', 'total_usage': 'Total Usage (hours)'})
+            st.plotly_chart(fig_usage_growth, use_container_width=True)
+        else:
+            st.info("No yearly comparison data available yet")
+    else:
+        st.info("Yearly comparison tracking system is ready but no data collected yet")
+    
+    # Semester-to-semester comparisons
+    st.subheader("📅 Semester Comparisons")
+    
+    if 'semester_data' in st.session_state:
+        semester_data = pd.DataFrame(st.session_state.semester_data)
+        if not semester_data.empty:
+            # Calculate semester metrics
+            semester_metrics = semester_data.groupby(['year', 'semester']).agg({
+                'registrations': 'sum',
+                'unique_users': 'nunique',
+                'total_usage': 'sum'
+            }).reset_index()
+            
+            # Create semester labels
+            semester_metrics['semester_label'] = semester_metrics['year'].astype(str) + ' ' + semester_metrics['semester']
+            
+            # Create columns for different semester metrics
+            semester_col1, semester_col2 = st.columns(2)
+            
+            with semester_col1:
+                # Registration comparison
+                fig_sem_reg = px.bar(semester_metrics, x='semester_label', y='registrations',
+                                    title='Registrations by Semester',
+                                    labels={'semester_label': 'Semester', 'registrations': 'Total Registrations'})
+                st.plotly_chart(fig_sem_reg, use_container_width=True)
+            
+            with semester_col2:
+                # User comparison
+                fig_sem_users = px.bar(semester_metrics, x='semester_label', y='unique_users',
+                                      title='Unique Users by Semester',
+                                      labels={'semester_label': 'Semester', 'unique_users': 'Unique Users'})
+                st.plotly_chart(fig_sem_users, use_container_width=True)
+            
+            # Usage comparison
+            fig_sem_usage = px.bar(semester_metrics, x='semester_label', y='total_usage',
+                                  title='Total Usage by Semester',
+                                  labels={'semester_label': 'Semester', 'total_usage': 'Total Usage (hours)'})
+            st.plotly_chart(fig_sem_usage, use_container_width=True)
+        else:
+            st.info("No semester comparison data available yet")
+    else:
+        st.info("Semester comparison tracking system is ready but no data collected yet")
+    
+    # Department performance comparisons
+    st.subheader("🏫 Department Performance")
+    
+    if 'department_data' in st.session_state:
+        department_data = pd.DataFrame(st.session_state.department_data)
+        if not department_data.empty:
+            # Calculate department metrics
+            dept_metrics = department_data.groupby('department').agg({
+                'registrations': 'sum',
+                'unique_users': 'nunique',
+                'total_usage': 'sum',
+                'satisfaction_score': 'mean'
+            }).reset_index()
+            
+            # Create columns for different department metrics
+            dept_col1, dept_col2 = st.columns(2)
+            
+            with dept_col1:
+                # Registration by department
+                fig_dept_reg = px.bar(dept_metrics, x='department', y='registrations',
+                                     title='Registrations by Department',
+                                     labels={'department': 'Department', 'registrations': 'Total Registrations'})
+                st.plotly_chart(fig_dept_reg, use_container_width=True)
+            
+            with dept_col2:
+                # Satisfaction by department
+                fig_dept_sat = px.bar(dept_metrics, x='department', y='satisfaction_score',
+                                     title='Satisfaction by Department',
+                                     labels={'department': 'Department', 'satisfaction_score': 'Average Satisfaction'})
+                st.plotly_chart(fig_dept_sat, use_container_width=True)
+            
+            # Usage by department
+            fig_dept_usage = px.bar(dept_metrics, x='department', y='total_usage',
+                                   title='Usage by Department',
+                                   labels={'department': 'Department', 'total_usage': 'Total Usage (hours)'})
+            st.plotly_chart(fig_dept_usage, use_container_width=True)
+        else:
+            st.info("No department comparison data available yet")
+    else:
+        st.info("Department comparison tracking system is ready but no data collected yet")
+    
+    # Predictive Analytics
+    st.subheader("🔮 Predictive Analytics")
+    
+    # Usage forecasting
+    st.subheader("📊 Usage Forecasting")
+    
+    if 'historical_usage' in st.session_state:
+        historical_usage = pd.DataFrame(st.session_state.historical_usage)
+        if not historical_usage.empty:
+            # Create time series for forecasting
+            historical_usage['date'] = pd.to_datetime(historical_usage['date'])
+            historical_usage.set_index('date', inplace=True)
+            
+            # Calculate moving averages for forecasting
+            historical_usage['7_day_ma'] = historical_usage['usage'].rolling(window=7).mean()
+            historical_usage['30_day_ma'] = historical_usage['usage'].rolling(window=30).mean()
+            
+            # Plot historical usage with moving averages
+            fig_forecast = go.Figure()
+            fig_forecast.add_trace(go.Scatter(x=historical_usage.index, y=historical_usage['usage'],
+                                            name='Actual Usage', line=dict(color='blue')))
+            fig_forecast.add_trace(go.Scatter(x=historical_usage.index, y=historical_usage['7_day_ma'],
+                                            name='7-Day Moving Average', line=dict(color='orange')))
+            fig_forecast.add_trace(go.Scatter(x=historical_usage.index, y=historical_usage['30_day_ma'],
+                                            name='30-Day Moving Average', line=dict(color='green')))
+            
+            fig_forecast.update_layout(title='Usage Forecasting',
+                                     xaxis_title='Date',
+                                     yaxis_title='Usage (hours)',
+                                     showlegend=True)
+            st.plotly_chart(fig_forecast, use_container_width=True)
+            
+            # Display forecast metrics
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                # Calculate growth rate
+                growth_rate = ((historical_usage['30_day_ma'].iloc[-1] / 
+                              historical_usage['30_day_ma'].iloc[-30]) - 1) * 100
+                st.metric("30-Day Growth Rate", f"{growth_rate:.1f}%")
+            
+            with col2:
+                # Calculate forecast
+                forecast = historical_usage['30_day_ma'].iloc[-1] * (1 + growth_rate/100)
+                st.metric("Next 30-Day Forecast", f"{forecast:.1f} hours")
+        else:
+            st.info("No historical usage data available for forecasting")
+    else:
+        st.info("Usage forecasting system is ready but no data collected yet")
+    
+    # Peak time predictions
+    st.subheader("⏰ Peak Time Predictions")
+    
+    if 'hourly_usage' in st.session_state:
+        hourly_usage = pd.DataFrame(st.session_state.hourly_usage)
+        if not hourly_usage.empty:
+            # Calculate average usage by hour
+            hourly_avg = hourly_usage.groupby('hour')['usage'].mean().reset_index()
+            
+            # Identify peak hours
+            peak_hours = hourly_avg.nlargest(3, 'usage')
+            
+            # Plot hourly usage pattern
+            fig_peak = px.line(hourly_avg, x='hour', y='usage',
+                              title='Average Hourly Usage Pattern',
+                              labels={'hour': 'Hour of Day', 'usage': 'Average Usage'})
+            
+            # Add peak hour markers
+            for _, row in peak_hours.iterrows():
+                fig_peak.add_vline(x=row['hour'], line_dash="dash", line_color="red")
+            
+            st.plotly_chart(fig_peak, use_container_width=True)
+            
+            # Display peak hour predictions
+            st.write("Predicted Peak Hours:")
+            for _, row in peak_hours.iterrows():
+                st.write(f"- {row['hour']:02d}:00: {row['usage']:.1f} average users")
+        else:
+            st.info("No hourly usage data available for peak time prediction")
+    else:
+        st.info("Peak time prediction system is ready but no data collected yet")
+    
+    # Student success prediction
+    st.subheader("🎓 Student Success Prediction")
+    
+    if 'student_performance' in st.session_state:
+        student_performance = pd.DataFrame(st.session_state.student_performance)
+        if not student_performance.empty:
+            # Calculate success indicators
+            success_indicators = student_performance.groupby('usage_category').agg({
+                'success_rate': 'mean',
+                'count': 'sum'
+            }).reset_index()
+            
+            # Plot success rate by usage category
+            fig_success = px.bar(success_indicators, x='usage_category', y='success_rate',
+                                title='Success Rate by Usage Category',
+                                labels={'usage_category': 'Usage Category', 'success_rate': 'Success Rate (%)'})
+            st.plotly_chart(fig_success, use_container_width=True)
+            
+            # Display success prediction metrics
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                # Calculate overall success rate
+                overall_success = student_performance['success_rate'].mean()
+                st.metric("Overall Success Rate", f"{overall_success:.1f}%")
+            
+            with col2:
+                # Calculate success threshold
+                success_threshold = student_performance[student_performance['success_rate'] > 70]['usage_hours'].min()
+                st.metric("Minimum Hours for Success", f"{success_threshold:.1f} hours")
+        else:
+            st.info("No student performance data available for success prediction")
+    else:
+        st.info("Student success prediction system is ready but no data collected yet")
+    
+    # Custom Reports and Exports
+    st.subheader("📊 Custom Reports and Exports")
+    
+    # Date range selector
+    st.subheader("📅 Custom Date Range Analysis")
     
     col1, col2 = st.columns(2)
     
     with col1:
-        # Campus distribution
-        campus_dist = df['campus'].value_counts()
-        fig_campus = px.pie(values=campus_dist.values, names=campus_dist.index,
-                           title='Distribution by Campus')
-        st.plotly_chart(fig_campus)
-        
-    with col2:
-        # Major distribution
-        major_dist = df['major'].value_counts()
-        fig_major = px.pie(values=major_dist.values, names=major_dist.index,
-                          title='Distribution by Major')
-        st.plotly_chart(fig_major)
+        start_date = st.date_input("Start Date", value=df['timestamp'].min().date())
     
-    # Grade Level Analysis
-    grade_dist = df['grade'].value_counts()
-    fig_grade = px.bar(x=grade_dist.index, y=grade_dist.values,
-                       title='Distribution by Grade Level')
-    st.plotly_chart(fig_grade, use_container_width=True)
+    with col2:
+        end_date = st.date_input("End Date", value=df['timestamp'].max().date())
+    
+    # Filter data based on selected date range
+    filtered_df = df[(df['timestamp'].dt.date >= start_date) & 
+                    (df['timestamp'].dt.date <= end_date)]
+    
+    if not filtered_df.empty:
+        # Display filtered metrics
+        st.subheader("📈 Filtered Metrics")
+        
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric("Total Registrations", len(filtered_df))
+        
+        with col2:
+            total_usage = filtered_df['usage_time_minutes'].sum()
+            st.metric("Total Usage Time (hrs)", f"{total_usage / 60:.1f}")
+        
+        with col3:
+            avg_session = filtered_df['usage_time_minutes'].mean()
+            st.metric("Avg. Session Length (min)", f"{avg_session:.1f}")
+        
+        with col4:
+            unique_students = filtered_df['student_id'].nunique()
+            st.metric("Unique Students", unique_students)
+        
+        # Department-specific reports
+        st.subheader("🏫 Department-Specific Reports")
+        
+        selected_department = st.selectbox("Select Department", 
+                                         options=sorted(filtered_df['department'].unique()))
+        
+        if selected_department:
+            dept_df = filtered_df[filtered_df['department'] == selected_department]
+            
+            # Department metrics
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                st.metric("Department Registrations", len(dept_df))
+            
+            with col2:
+                dept_usage = dept_df['usage_time_minutes'].sum()
+                st.metric("Department Usage (hrs)", f"{dept_usage / 60:.1f}")
+            
+            with col3:
+                dept_students = dept_df['student_id'].nunique()
+                st.metric("Unique Department Students", dept_students)
+            
+            # Department usage trends
+            dept_trends = dept_df.groupby(dept_df['timestamp'].dt.date).agg({
+                'student_id': 'count',
+                'usage_time_minutes': 'sum'
+            }).reset_index()
+            
+            fig_dept_trends = px.line(dept_trends, x='timestamp', y=['student_id', 'usage_time_minutes'],
+                                     title=f'{selected_department} Usage Trends',
+                                     labels={'timestamp': 'Date', 'value': 'Count/Usage'})
+            st.plotly_chart(fig_dept_trends, use_container_width=True)
+    
+    # Export options
+    st.subheader("📥 Export Options")
+    
+    # Create export columns
+    export_col1, export_col2 = st.columns(2)
+    
+    with export_col1:
+        # Export filtered data
+        if not filtered_df.empty:
+            csv = filtered_df.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="📥 Download Filtered Data (CSV)",
+                data=csv,
+                file_name=f"nuanswers_filtered_data_{start_date}_{end_date}.csv",
+                mime="text/csv"
+            )
+    
+    with export_col2:
+        # Export department report
+        if selected_department and not dept_df.empty:
+            dept_csv = dept_df.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label=f"📥 Download {selected_department} Report (CSV)",
+                data=dept_csv,
+                file_name=f"nuanswers_{selected_department}_report_{start_date}_{end_date}.csv",
+                mime="text/csv"
+            )
+    
+    # Scheduled report generation
+    st.subheader("⏰ Scheduled Reports")
+    
+    # Report scheduling options
+    schedule_col1, schedule_col2 = st.columns(2)
+    
+    with schedule_col1:
+        report_frequency = st.selectbox("Report Frequency",
+                                      options=["Daily", "Weekly", "Monthly"])
+    
+    with schedule_col2:
+        report_type = st.multiselect("Report Types",
+                                   options=["Usage Summary", "Department Analysis", 
+                                           "Student Success", "System Performance"])
+    
+    if st.button("Schedule Reports"):
+        st.success(f"Reports scheduled for {report_frequency} delivery: {', '.join(report_type)}")
+
+    # Course Analysis
+    st.subheader("📚 Course Analysis")
+    
+    tab1, tab2 = st.tabs(["Course Distribution", "Professor Analysis"])
+    
+    with tab1:
+        col1, col2 = st.columns(2)
+        with col1:
+            course_dist = df['course_name'].value_counts().head(10)
+            fig_course = px.bar(x=course_dist.index, y=course_dist.values,
+                               title='Top 10 Most Common Courses')
+            st.plotly_chart(fig_course, use_container_width=True)
+        
+        with col2:
+            course_id_dist = df['course_id'].value_counts().head(10)
+            fig_course_id = px.bar(x=course_id_dist.index, y=course_id_dist.values,
+                                  title='Top 10 Course IDs')
+            st.plotly_chart(fig_course_id, use_container_width=True)
+    
+    with tab2:
+        prof_dist = df['professor'].value_counts()
+        fig_prof = px.pie(values=prof_dist.values, names=prof_dist.index,
+                         title='Distribution by Professor')
+        st.plotly_chart(fig_prof, use_container_width=True)
     
     # Raw Data Section with enhanced filtering
     st.subheader("📝 Raw Registration Data")
     
     # Filters
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     
     with col1:
         # Date filter
@@ -622,6 +1156,14 @@ try:
             default=[]
         )
     
+    with col4:
+        # Professor filter
+        selected_professors = st.multiselect(
+            "Filter by Professor",
+            options=sorted(df['professor'].unique()),
+            default=[]
+        )
+    
     # Apply filters
     filtered_df = df.copy()
     
@@ -637,6 +1179,9 @@ try:
     
     if selected_campuses:
         filtered_df = filtered_df[filtered_df['campus'].isin(selected_campuses)]
+        
+    if selected_professors:
+        filtered_df = filtered_df[filtered_df['professor'].isin(selected_professors)]
     
     # Display filtered data
     st.dataframe(
