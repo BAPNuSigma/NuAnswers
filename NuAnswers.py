@@ -142,14 +142,8 @@ with st.sidebar:
     st.title("📚 NuAnswers")
 
 # Initialize session state for form
-if "previous_major" not in st.session_state:
-    st.session_state.previous_major = None
-
-def on_major_change():
-    """Handle major selection change"""
-    if st.session_state.major != st.session_state.previous_major:
-        st.session_state.previous_major = st.session_state.major
-        st.rerun()
+if "current_major" not in st.session_state:
+    st.session_state.current_major = "Accounting"
 
 # Registration form
 if not st.session_state.registered:
@@ -163,12 +157,11 @@ if not st.session_state.registered:
         grade = st.selectbox("Grade", ["Freshman", "Sophomore", "Junior", "Senior", "Graduate"])
         campus = st.selectbox("Campus", ["Florham", "Metro", "Vancouver"])
         
-        # Major selection with callback
+        # Major selection without callback
         major = st.selectbox(
             "Major",
             ["Accounting", "Finance", "MIS [Management Information Systems]"],
-            key="major",
-            on_change=on_major_change
+            key="major"
         )
         
         # Course name input based on major
@@ -207,6 +200,11 @@ if not st.session_state.registered:
                 # Set registered state
                 st.session_state.registered = True
                 st.rerun()
+        
+        # Update current major if it changed
+        if major != st.session_state.current_major:
+            st.session_state.current_major = major
+            st.rerun()
 
 # Function to extract text from different file types
 def extract_text_from_file(file):
