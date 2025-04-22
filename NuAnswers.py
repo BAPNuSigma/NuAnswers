@@ -141,23 +141,41 @@ def save_registration(user_data, start_time):
 with st.sidebar:
     st.title("📚 NuAnswers")
 
+# Initialize session state for form
+if "previous_major" not in st.session_state:
+    st.session_state.previous_major = None
+
+def on_major_change():
+    """Handle major selection change"""
+    if st.session_state.major != st.session_state.previous_major:
+        st.session_state.previous_major = st.session_state.major
+        st.rerun()
+
 # Registration form
 if not st.session_state.registered:
     st.title("📝 Registration Form")
     st.write("Please complete the registration form to use NuAnswers.")
     
-    with st.form("registration_form"):
+    with st.form("registration_form", clear_on_submit=False):
         full_name = st.text_input("Full Name")
         student_id = st.text_input("FDU Student ID")
         email = st.text_input("FDU Student Email")
         grade = st.selectbox("Grade", ["Freshman", "Sophomore", "Junior", "Senior", "Graduate"])
         campus = st.selectbox("Campus", ["Florham", "Metro", "Vancouver"])
-        major = st.selectbox("Major", ["Accounting", "Finance", "MIS [Management Information Systems]"])
         
-        # Course-specific question with dynamic label and key based on major
+        # Major selection with callback
+        major = st.selectbox(
+            "Major",
+            ["Accounting", "Finance", "MIS [Management Information Systems]"],
+            key="major",
+            on_change=on_major_change
+        )
+        
+        # Course name input based on major
+        major_prefix = major.split('[')[0].strip()
         course_name = st.text_input(
-            f"Which {major.split('[')[0].strip()} class are you taking that relates to what you need help in?",
-            key=f"course_name_{major}"  # Add unique key based on major
+            f"Which {major_prefix} class are you taking that relates to what you need help in?",
+            key=f"course_input_{major_prefix}"
         )
         
         course_id = st.text_input("Course ID (EX: ACCT_####_##)")
