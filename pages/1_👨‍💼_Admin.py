@@ -220,11 +220,91 @@ try:
                                        'student_id': 'Number of Sessions'})
     st.plotly_chart(fig_grade_usage, use_container_width=True)
     
-    # Course success metrics (if feedback system is implemented)
-    st.info("💡 Tip: Consider implementing a feedback system to track course success metrics")
+    # Course success metrics
+    st.subheader("📊 Course Success Metrics")
     
+    # Create columns for different metrics
+    success_col1, success_col2 = st.columns(2)
+    
+    with success_col1:
+        # Session feedback analysis
+        if 'feedback_data' in st.session_state:
+            feedback_df = pd.DataFrame(st.session_state.feedback_data)
+            if not feedback_df.empty:
+                # Calculate average ratings
+                avg_rating = feedback_df['rating'].mean()
+                st.metric("Average Session Rating", f"{avg_rating:.1f}/5")
+                
+                # Rating distribution
+                fig_ratings = px.histogram(feedback_df, x='rating',
+                                         title='Distribution of Session Ratings',
+                                         labels={'rating': 'Rating (1-5)'},
+                                         nbins=5)
+                st.plotly_chart(fig_ratings, use_container_width=True)
+            else:
+                st.info("No feedback data available yet")
+        else:
+            st.info("Feedback system is ready but no data collected yet")
+    
+    with success_col2:
+        # Course completion tracking
+        if 'completion_data' in st.session_state:
+            completion_df = pd.DataFrame(st.session_state.completion_data)
+            if not completion_df.empty:
+                # Calculate completion rates
+                completion_rate = (completion_df['completed'].sum() / len(completion_df)) * 100
+                st.metric("Average Completion Rate", f"{completion_rate:.1f}%")
+                
+                # Completion by course
+                course_completion = completion_df.groupby('course_id')['completed'].mean() * 100
+                fig_completion = px.bar(x=course_completion.index, 
+                                      y=course_completion.values,
+                                      title='Completion Rates by Course',
+                                      labels={'x': 'Course ID', 'y': 'Completion Rate (%)'})
+                st.plotly_chart(fig_completion, use_container_width=True)
+            else:
+                st.info("No completion data available yet")
+        else:
+            st.info("Completion tracking system is ready but no data collected yet")
+
     # Most common topics/questions
-    st.info("💡 Tip: Consider implementing a topic tracking system to analyze common questions")
+    st.subheader("📝 Topic Analysis")
+    
+    if 'topic_data' in st.session_state:
+        topic_df = pd.DataFrame(st.session_state.topic_data)
+        if not topic_df.empty:
+            # Create columns for different topic analyses
+            topic_col1, topic_col2 = st.columns(2)
+            
+            with topic_col1:
+                # Most common topics
+                topic_counts = topic_df['topic'].value_counts().head(10)
+                fig_topics = px.bar(x=topic_counts.index, 
+                                  y=topic_counts.values,
+                                  title='Top 10 Most Common Topics',
+                                  labels={'x': 'Topic', 'y': 'Number of Questions'})
+                st.plotly_chart(fig_topics, use_container_width=True)
+            
+            with topic_col2:
+                # Topic difficulty analysis
+                if 'difficulty' in topic_df.columns:
+                    topic_difficulty = topic_df.groupby('topic')['difficulty'].mean().sort_values(ascending=False).head(10)
+                    fig_difficulty = px.bar(x=topic_difficulty.index,
+                                          y=topic_difficulty.values,
+                                          title='Most Challenging Topics',
+                                          labels={'x': 'Topic', 'y': 'Average Difficulty (1-5)'})
+                    st.plotly_chart(fig_difficulty, use_container_width=True)
+            
+            # Topic trends over time
+            topic_trends = topic_df.groupby([pd.Grouper(key='timestamp', freq='D'), 'topic']).size().unstack(fill_value=0)
+            fig_trends = px.line(topic_trends,
+                               title='Topic Trends Over Time',
+                               labels={'value': 'Number of Questions', 'variable': 'Topic'})
+            st.plotly_chart(fig_trends, use_container_width=True)
+        else:
+            st.info("No topic data available yet")
+    else:
+        st.info("Topic tracking system is ready but no data collected yet")
     
     # User Engagement Analysis
     st.subheader("📱 User Engagement")
