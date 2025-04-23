@@ -1015,21 +1015,155 @@ def track_semester_data(semester=None, year=None):
     st.session_state.semester_data.append(entry)
     save_to_csv(entry, SEMESTER_DATA_PATH)
 
+def calculate_department_metrics(department_data):
+    """Calculate comprehensive metrics for department performance"""
+    metrics = {
+        "total_students": department_data['student_id'].nunique(),
+        "total_sessions": len(department_data),
+        "total_usage_hours": department_data['usage_time_minutes'].sum() / 60,
+        "avg_session_length": department_data['usage_time_minutes'].mean(),
+        "avg_sessions_per_student": len(department_data) / department_data['student_id'].nunique() if department_data['student_id'].nunique() > 0 else 0,
+    }
+    
+    # Calculate engagement metrics
+    if not department_data.empty:
+        metrics.update({
+            "repeat_users": len(department_data.groupby('student_id').filter(lambda x: len(x) > 1)['student_id'].unique()),
+            "repeat_user_rate": len(department_data.groupby('student_id').filter(lambda x: len(x) > 1)['student_id'].unique()) / department_data['student_id'].nunique(),
+        })
+    
+    return metrics
+
 def track_department_data(department):
-    """Track department-specific metrics"""
+    """Enhanced department performance tracking"""
+    # Get current semester info
+    current_semester, current_year = get_current_semester()
+    
+    # Filter data for the department
     dept_data = st.session_state.registration_data[
         st.session_state.registration_data['major'] == department
     ]
+    
+    # Get semester dates
+    semester_start = {
+        "Fall": "2024-08-26",
+        "Winter": "2025-01-02",
+        "Spring": "2025-01-21",
+        "Summer": "2025-05-19"
+    }.get(current_semester)
+    
+    semester_end = {
+        "Fall": "2024-12-18",
+        "Winter": "2025-01-20",
+        "Spring": "2025-05-13",
+        "Summer": "2025-08-09"
+    }.get(current_semester)
+    
+    # Filter for current semester if dates are available
+    if semester_start and semester_end:
+        mask = (dept_data['timestamp'] >= semester_start) & \
+               (dept_data['timestamp'] <= semester_end)
+        current_semester_data = dept_data[mask]
+    else:
+        current_semester_data = dept_data
+    
+    # Calculate current semester metrics
+    current_metrics = calculate_department_metrics(current_semester_data)
+    
+    # Calculate satisfaction metrics if feedback data exists
+    dept_feedback = [f for f in st.session_state.feedback_data 
+                    if f.get('student_id') in dept_data['student_id'].unique()]
+    
+    satisfaction_metrics = {
+        "avg_satisfaction": sum(f['rating'] for f in dept_feedback) / len(dept_feedback) if dept_feedback else 0,
+        "total_feedback": len(dept_feedback),
+        "satisfaction_rate_5": len([f for f in dept_feedback if f['rating'] == 5]) / len(dept_feedback) if dept_feedback else 0,
+        "satisfaction_rate_4_plus": len([f for f in dept_feedback if f['rating'] >= 4]) / len(dept_feedback) if dept_feedback else 0
+    }
+    
+    # Calculate topic performance
+    dept_topics = [t for t in st.session_state.topic_data 
+                  if t.get('student_id') in dept_data['student_id'].unique()]
+    
+    topic_metrics = {}
+    if dept_topics:
+        topic_counts = {}
+        topic_difficulties = {}
+        for t in dept_topics:
+            topic = t.get('topic', '')
+            difficulty = t.get('difficulty', 0)
+            topic_counts[topic] = topic_counts.get(topic, 0) + 1
+            topic_difficulties[topic] = topic_difficulties.get(topic, []) + [difficulty]
+        
+        topic_metrics = {
+            "most_common_topics": sorted(topic_counts.items(), key=lambda x: x[1], reverse=True)[:5],
+            "avg_topic_difficulty": {topic: sum(difficulties)/len(difficulties) 
+                                   for topic, difficulties in topic_difficulties.items()}
+        }
+    
+    # Calculate completion metrics
+    dept_completions = [c for c in st.session_state.completion_data 
+                       if c.get('student_id') in dept_data['student_id'].unique()]
+    
+    completion_metrics = {
+        "completion_rate": len([c for c in dept_completions if c.get('completed', False)]) / len(dept_completions) if dept_completions else 0,
+        "total_completions": len([c for c in dept_completions if c.get('completed', False)])
+    }
+    
+    # Calculate usage patterns
+    if not current_semester_data.empty:
+        usage_patterns = {
+            "peak_usage_hour": current_semester_data['timestamp'].dt.hour.mode().iloc[0] if len(current_semester_data) > 0 else None,
+            "peak_usage_day": current_semester_data['timestamp'].dt.day_name().mode().iloc[0] if len(current_semester_data) > 0 else None,
+            "avg_daily_users": current_semester_data.groupby(current_semester_data['timestamp'].dt.date)['student_id'].nunique().mean()
+        }
+    else:
+        usage_patterns = {
+            "peak_usage_hour": None,
+            "peak_usage_day": None,
+            "avg_daily_users": 0
+        }
+    
+    # Combine all metrics
     entry = {
         "timestamp": datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %H:%M:%S"),
         "department": department,
-        "registrations": len(dept_data),
-        "unique_users": dept_data['student_id'].nunique(),
-        "total_usage": dept_data['usage_time_minutes'].sum(),
-        "satisfaction_score": st.session_state.feedback_data[-1]['rating'] if st.session_state.feedback_data else None
+        "semester": current_semester,
+        "year": current_year,
+        **current_metrics,
+        **satisfaction_metrics,
+        **completion_metrics,
+        **usage_patterns,
+        "topic_analysis": topic_metrics
     }
+    
+    # Calculate relative performance (compared to other departments)
+    all_dept_data = {}
+    for dept in st.session_state.registration_data['major'].unique():
+        other_dept_data = st.session_state.registration_data[
+            st.session_state.registration_data['major'] == dept
+        ]
+        all_dept_data[dept] = calculate_department_metrics(other_dept_data)
+    
+    # Add relative performance metrics
+    if len(all_dept_data) > 1:
+        dept_metrics = all_dept_data[department]
+        other_depts_avg = {
+            metric: sum(d[metric] for d in all_dept_data.values() if d != dept_metrics) / (len(all_dept_data) - 1)
+            for metric in dept_metrics.keys()
+        }
+        
+        relative_performance = {
+            f"relative_{metric}": (dept_metrics[metric] / other_depts_avg[metric] if other_depts_avg[metric] > 0 else 1)
+            for metric in dept_metrics.keys()
+        }
+        
+        entry.update(relative_performance)
+    
     st.session_state.department_data.append(entry)
     save_to_csv(entry, DEPARTMENT_DATA_PATH)
+    
+    return entry
 
 def track_historical_usage():
     """Track historical usage patterns"""
