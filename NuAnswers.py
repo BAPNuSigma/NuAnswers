@@ -14,6 +14,7 @@ import openpyxl
 import io
 import base64
 from zoneinfo import ZoneInfo
+import re
 
 # Set page config
 st.set_page_config(
@@ -234,7 +235,27 @@ if not st.session_state.registered:
         
         # General course question
         course_name = st.text_input("Which class are you taking that relates to what you need help in?")
-        course_id = st.text_input("Course ID (EX: ACCT_####_##)")
+        
+        # Course ID with validation
+        course_id = st.text_input("Course ID (Format: DEPT_####_##)", help="Examples: ACCT_2021_01, FIN_3250_02")
+        
+        # Validate course ID format
+        is_valid_course_id = False
+        if course_id:
+            valid_prefixes = ['ACCT', 'ECON', 'FIN', 'MIS', 'WMA']
+            pattern = f"^({'|'.join(valid_prefixes)})_\\d{{4}}_\\d{{2}}$"
+            is_valid_course_id = bool(re.match(pattern, course_id))
+            if not is_valid_course_id:
+                st.error("""
+                Invalid Course ID format. Please use one of the following formats:
+                - ACCT_####_##
+                - ECON_####_##
+                - FIN_####_##
+                - MIS_####_##
+                - WMA_####_##
+                Where # represents a digit.
+                """)
+        
         professor = st.text_input("Professor's Name")
         
         submitted = st.form_submit_button("Submit")
@@ -246,6 +267,8 @@ if not st.session_state.registered:
                 st.error("Please enter a valid 7-digit FDU Student ID.")
             elif not is_valid_email:
                 st.error("Please enter a valid FDU email address.")
+            elif not is_valid_course_id:
+                st.error("Please enter a valid Course ID format.")
             else:
                 # Save user data
                 st.session_state.user_data = {
