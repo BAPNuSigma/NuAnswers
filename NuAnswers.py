@@ -574,6 +574,8 @@ if st.session_state.registered:
 
     # Create a chat input field
     if prompt := st.chat_input("What would you like to work on today?"):
+        response_start_time = datetime.now(ZoneInfo("America/New_York"))
+        
         # Store and display the current prompt
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
@@ -626,6 +628,22 @@ Example of bad tutoring:
             response = st.write_stream(stream)
         st.session_state.messages.append({"role": "assistant", "content": response})
 
+        response_end_time = datetime.now(ZoneInfo("America/New_York"))
+        track_response_time(response_start_time, response_end_time)
+        
+        # Track content access if documents are referenced
+        if st.session_state.uploaded_documents:
+            for doc in st.session_state.uploaded_documents:
+                track_content_access(doc['name'], 'document' if not doc.get('is_image') else 'image')
+        
+        # Track resolution time if topic is completed
+        if "current_topic_start" in st.session_state and "current_topic" in st.session_state:
+            track_resolution_time(
+                st.session_state.current_topic_start,
+                datetime.now(ZoneInfo("America/New_York")),
+                st.session_state.current_topic
+            )
+
     # Add a logout button
     if st.button("Logout"):
         # Save final usage data before logout
@@ -659,6 +677,33 @@ Example of bad tutoring:
                 save_feedback(rating, topic, difficulty)
                 track_topic(topic, difficulty)
                 track_completion(True)
+                track_feedback_trend(rating, None)  # Add suggestions parameter if needed
+                
+                # Track department data if applicable
+                if "major" in st.session_state.user_data:
+                    track_department_data(st.session_state.user_data["major"])
+                
+                # Track semester and yearly data
+                current_month = datetime.now(ZoneInfo("America/New_York")).month
+                semester = "Spring" if 1 <= current_month <= 5 else "Fall" if 8 <= current_month <= 12 else "Summer"
+                track_semester_data(semester)
+                track_yearly_data()
+                
+                # Track usage patterns
+                track_historical_usage()
+                track_hourly_usage()
+                
+                # Track student performance
+                if "user_data" in st.session_state and "registration_data" in st.session_state:
+                    student_id = st.session_state.user_data.get("student_id")
+                    if student_id:
+                        student_data = st.session_state.registration_data[
+                            st.session_state.registration_data['student_id'] == student_id
+                        ]
+                        usage_hours = student_data['usage_time_minutes'].sum() / 60
+                        success_rate = rating * 20  # Convert 1-5 rating to percentage
+                        track_student_performance(student_id, usage_hours, success_rate)
+                
                 st.success("Thank you for your feedback!")
             else:
                 st.warning("Please enter the topic discussed.")
@@ -780,3 +825,177 @@ def analyze_image(file):
     except Exception as e:
         st.error(f"Error analyzing image: {str(e)}")
         return None
+
+# Initialize additional tracking systems in session state
+if "response_times" not in st.session_state:
+    st.session_state.response_times = []
+if "system_status" not in st.session_state:
+    st.session_state.system_status = []
+if "content_access" not in st.session_state:
+    st.session_state.content_access = []
+if "resolution_times" not in st.session_state:
+    st.session_state.resolution_times = []
+if "feedback_trends" not in st.session_state:
+    st.session_state.feedback_trends = []
+if "yearly_data" not in st.session_state:
+    st.session_state.yearly_data = []
+if "semester_data" not in st.session_state:
+    st.session_state.semester_data = []
+if "department_data" not in st.session_state:
+    st.session_state.department_data = []
+if "historical_usage" not in st.session_state:
+    st.session_state.historical_usage = []
+if "hourly_usage" not in st.session_state:
+    st.session_state.hourly_usage = []
+if "student_performance" not in st.session_state:
+    st.session_state.student_performance = []
+
+# Configure additional data paths
+RESPONSE_TIMES_PATH = DATA_DIR / "response_times.csv"
+SYSTEM_STATUS_PATH = DATA_DIR / "system_status.csv"
+CONTENT_ACCESS_PATH = DATA_DIR / "content_access.csv"
+RESOLUTION_TIMES_PATH = DATA_DIR / "resolution_times.csv"
+FEEDBACK_TRENDS_PATH = DATA_DIR / "feedback_trends.csv"
+YEARLY_DATA_PATH = DATA_DIR / "yearly_data.csv"
+SEMESTER_DATA_PATH = DATA_DIR / "semester_data.csv"
+DEPARTMENT_DATA_PATH = DATA_DIR / "department_data.csv"
+HISTORICAL_USAGE_PATH = DATA_DIR / "historical_usage.csv"
+HOURLY_USAGE_PATH = DATA_DIR / "hourly_usage.csv"
+STUDENT_PERFORMANCE_PATH = DATA_DIR / "student_performance.csv"
+
+def track_response_time(start_time, end_time):
+    """Track system response time"""
+    response_time = (end_time - start_time).total_seconds()
+    entry = {
+        "timestamp": end_time.strftime("%Y-%m-%d %H:%M:%S"),
+        "response_time": response_time,
+        "user_id": st.session_state.user_data.get("student_id")
+    }
+    st.session_state.response_times.append(entry)
+    save_to_csv(entry, RESPONSE_TIMES_PATH)
+
+def track_system_status(status, start_time, end_time=None):
+    """Track system uptime and status"""
+    if end_time is None:
+        end_time = datetime.now(ZoneInfo("America/New_York"))
+    duration = (end_time - start_time).total_seconds()
+    entry = {
+        "start_time": start_time.strftime("%Y-%m-%d %H:%M:%S"),
+        "end_time": end_time.strftime("%Y-%m-%d %H:%M:%S"),
+        "status": status,
+        "duration": duration
+    }
+    st.session_state.system_status.append(entry)
+    save_to_csv(entry, SYSTEM_STATUS_PATH)
+
+def track_content_access(content_id, content_type):
+    """Track content access patterns"""
+    entry = {
+        "timestamp": datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %H:%M:%S"),
+        "content_id": content_id,
+        "content_type": content_type,
+        "user_id": st.session_state.user_data.get("student_id")
+    }
+    st.session_state.content_access.append(entry)
+    save_to_csv(entry, CONTENT_ACCESS_PATH)
+
+def track_resolution_time(start_time, end_time, topic):
+    """Track problem resolution time"""
+    resolution_time = (end_time - start_time).total_seconds() / 60  # Convert to minutes
+    entry = {
+        "timestamp": end_time.strftime("%Y-%m-%d %H:%M:%S"),
+        "resolution_time": resolution_time,
+        "topic": topic,
+        "user_id": st.session_state.user_data.get("student_id")
+    }
+    st.session_state.resolution_times.append(entry)
+    save_to_csv(entry, RESOLUTION_TIMES_PATH)
+
+def track_feedback_trend(satisfaction_score, suggestions=None):
+    """Track feedback trends over time"""
+    entry = {
+        "date": datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d"),
+        "satisfaction_score": satisfaction_score,
+        "suggestions": suggestions,
+        "user_id": st.session_state.user_data.get("student_id")
+    }
+    st.session_state.feedback_trends.append(entry)
+    save_to_csv(entry, FEEDBACK_TRENDS_PATH)
+
+def track_yearly_data():
+    """Track yearly performance metrics"""
+    current_year = datetime.now(ZoneInfo("America/New_York")).year
+    entry = {
+        "year": current_year,
+        "registrations": len(st.session_state.registration_data),
+        "unique_users": st.session_state.registration_data['student_id'].nunique(),
+        "total_usage": st.session_state.registration_data['usage_time_minutes'].sum()
+    }
+    st.session_state.yearly_data.append(entry)
+    save_to_csv(entry, YEARLY_DATA_PATH)
+
+def track_semester_data(semester):
+    """Track semester-specific metrics"""
+    current_year = datetime.now(ZoneInfo("America/New_York")).year
+    entry = {
+        "year": current_year,
+        "semester": semester,
+        "registrations": len(st.session_state.registration_data),
+        "unique_users": st.session_state.registration_data['student_id'].nunique(),
+        "total_usage": st.session_state.registration_data['usage_time_minutes'].sum()
+    }
+    st.session_state.semester_data.append(entry)
+    save_to_csv(entry, SEMESTER_DATA_PATH)
+
+def track_department_data(department):
+    """Track department-specific metrics"""
+    dept_data = st.session_state.registration_data[
+        st.session_state.registration_data['major'] == department
+    ]
+    entry = {
+        "timestamp": datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %H:%M:%S"),
+        "department": department,
+        "registrations": len(dept_data),
+        "unique_users": dept_data['student_id'].nunique(),
+        "total_usage": dept_data['usage_time_minutes'].sum(),
+        "satisfaction_score": st.session_state.feedback_data[-1]['rating'] if st.session_state.feedback_data else None
+    }
+    st.session_state.department_data.append(entry)
+    save_to_csv(entry, DEPARTMENT_DATA_PATH)
+
+def track_historical_usage():
+    """Track historical usage patterns"""
+    entry = {
+        "date": datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d"),
+        "usage": st.session_state.registration_data['usage_time_minutes'].sum() / 60,  # Convert to hours
+        "unique_users": st.session_state.registration_data['student_id'].nunique()
+    }
+    st.session_state.historical_usage.append(entry)
+    save_to_csv(entry, HISTORICAL_USAGE_PATH)
+
+def track_hourly_usage():
+    """Track hourly usage patterns"""
+    current_hour = datetime.now(ZoneInfo("America/New_York")).hour
+    entry = {
+        "timestamp": datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %H:%M:%S"),
+        "hour": current_hour,
+        "usage": len(st.session_state.registration_data[
+            st.session_state.registration_data['timestamp'].dt.hour == current_hour
+        ])
+    }
+    st.session_state.hourly_usage.append(entry)
+    save_to_csv(entry, HOURLY_USAGE_PATH)
+
+def track_student_performance(student_id, usage_hours, success_rate):
+    """Track student performance metrics"""
+    usage_category = pd.cut([usage_hours], bins=[0, 5, 10, 15, float('inf')], 
+                          labels=['Low', 'Medium', 'High', 'Very High'])[0]
+    entry = {
+        "timestamp": datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %H:%M:%S"),
+        "student_id": student_id,
+        "usage_hours": usage_hours,
+        "success_rate": success_rate,
+        "usage_category": usage_category
+    }
+    st.session_state.student_performance.append(entry)
+    save_to_csv(entry, STUDENT_PERFORMANCE_PATH)
