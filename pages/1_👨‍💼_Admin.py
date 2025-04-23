@@ -984,7 +984,7 @@ try:
     # Custom Reports and Exports
     st.subheader("📊 Custom Reports and Exports")
     
-    # Date range selector
+    # Custom Date Range Analysis
     st.subheader("📅 Custom Date Range Analysis")
     
     col1, col2 = st.columns(2)
@@ -1020,85 +1020,88 @@ try:
             unique_students = filtered_df['student_id'].nunique()
             st.metric("Unique Students", unique_students)
         
-        # Department-specific reports
-        st.subheader("🏫 Department-Specific Reports")
+        # Add Registration Data Table
+        st.subheader("📊 Registration Data Table")
         
-        selected_department = st.selectbox("Select Department", 
-                                         options=sorted(filtered_df['department'].unique()))
+        # Add column selection
+        available_columns = filtered_df.columns.tolist()
+        selected_columns = st.multiselect(
+            "Select columns to display",
+            options=available_columns,
+            default=['timestamp', 'student_id', 'grade', 'major', 'campus', 'professor', 'course_name']
+        )
         
-        if selected_department:
-            dept_df = filtered_df[filtered_df['department'] == selected_department]
+        # Add search/filter functionality
+        search_term = st.text_input("Search in any column", "")
+        
+        # Filter based on search term
+        if search_term:
+            mask = filtered_df.astype(str).apply(lambda x: x.str.contains(search_term, case=False)).any(axis=1)
+            display_df = filtered_df[mask]
+        else:
+            display_df = filtered_df
             
-            # Department metrics
-            col1, col2, col3 = st.columns(3)
-            
-            with col1:
-                st.metric("Department Registrations", len(dept_df))
-            
-            with col2:
-                dept_usage = dept_df['usage_time_minutes'].sum()
-                st.metric("Department Usage (hrs)", f"{dept_usage / 60:.1f}")
-            
-            with col3:
-                dept_students = dept_df['student_id'].nunique()
-                st.metric("Unique Department Students", dept_students)
-            
-            # Department usage trends
-            dept_trends = dept_df.groupby(dept_df['timestamp'].dt.date).agg({
-                'student_id': 'count',
-                'usage_time_minutes': 'sum'
-            }).reset_index()
-            
-            fig_dept_trends = px.line(dept_trends, x='timestamp', y=['student_id', 'usage_time_minutes'],
-                                     title=f'{selected_department} Usage Trends',
-                                     labels={'timestamp': 'Date', 'value': 'Count/Usage'})
-            st.plotly_chart(fig_dept_trends, use_container_width=True)
-    
-    # Export options
-    st.subheader("📥 Export Options")
-    
-    # Create export columns
-    export_col1, export_col2 = st.columns(2)
-    
-    with export_col1:
-        # Export filtered data
-        if not filtered_df.empty:
-            csv = filtered_df.to_csv(index=False).encode('utf-8')
-            st.download_button(
-                label="📥 Download Filtered Data (CSV)",
-                data=csv,
-                file_name=f"nuanswers_filtered_data_{start_date}_{end_date}.csv",
-                mime="text/csv"
+        # Display the filtered dataframe with selected columns
+        if selected_columns:
+            st.dataframe(
+                display_df[selected_columns].sort_values('timestamp', ascending=False),
+                use_container_width=True
             )
-    
-    with export_col2:
-        # Export department report
-        if selected_department and not dept_df.empty:
-            dept_csv = dept_df.to_csv(index=False).encode('utf-8')
-            st.download_button(
-                label=f"📥 Download {selected_department} Report (CSV)",
-                data=dept_csv,
-                file_name=f"nuanswers_{selected_department}_report_{start_date}_{end_date}.csv",
-                mime="text/csv"
-            )
-    
-    # Scheduled report generation
-    st.subheader("⏰ Scheduled Reports")
-    
-    # Report scheduling options
-    schedule_col1, schedule_col2 = st.columns(2)
-    
-    with schedule_col1:
-        report_frequency = st.selectbox("Report Frequency",
-                                      options=["Daily", "Weekly", "Monthly"])
-    
-    with schedule_col2:
-        report_type = st.multiselect("Report Types",
-                                   options=["Usage Summary", "Department Analysis", 
-                                           "Student Success", "System Performance"])
-    
-    if st.button("Schedule Reports"):
-        st.success(f"Reports scheduled for {report_frequency} delivery: {', '.join(report_type)}")
+            
+            # Add export options
+            st.subheader("📥 Export Options")
+            
+            export_col1, export_col2, export_col3 = st.columns(3)
+            
+            with export_col1:
+                # Export as CSV
+                csv = display_df[selected_columns].to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    label="📥 Download as CSV",
+                    data=csv,
+                    file_name=f"nuanswers_data_{start_date}_{end_date}.csv",
+                    mime="text/csv"
+                )
+            
+            with export_col2:
+                # Export as Excel
+                excel_buffer = io.BytesIO()
+                with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
+                    display_df[selected_columns].to_excel(writer, index=False)
+                excel_buffer.seek(0)
+                
+                st.download_button(
+                    label="📊 Download as Excel",
+                    data=excel_buffer,
+                    file_name=f"nuanswers_data_{start_date}_{end_date}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+            
+            with export_col3:
+                # Export as JSON
+                json_str = display_df[selected_columns].to_json(orient='records', date_format='iso')
+                st.download_button(
+                    label="🔄 Download as JSON",
+                    data=json_str,
+                    file_name=f"nuanswers_data_{start_date}_{end_date}.json",
+                    mime="application/json"
+                )
+            
+            # Add summary statistics
+            if st.checkbox("Show Summary Statistics"):
+                st.subheader("📊 Summary Statistics")
+                
+                # Numeric columns only
+                numeric_cols = display_df[selected_columns].select_dtypes(include=['int64', 'float64']).columns
+                if not numeric_cols.empty:
+                    st.dataframe(
+                        display_df[numeric_cols].describe(),
+                        use_container_width=True
+                    )
+                else:
+                    st.info("No numeric columns selected for summary statistics")
+    else:
+        st.info("No data available for the selected date range")
 
     # Course Analysis
     st.subheader("📚 Course Analysis")
