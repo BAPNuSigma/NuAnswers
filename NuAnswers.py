@@ -122,7 +122,7 @@ if "user_data" not in st.session_state:
 if "registration_data" not in st.session_state:
     st.session_state.registration_data = pd.DataFrame(columns=[
         "timestamp", "full_name", "student_id", "email", "grade", "campus",
-        "major", "course_name", "course_id", "professor", "usage_time_minutes"
+        "major", "course_name", "course_id", "professor", "professor_email", "usage_time_minutes"
     ])
 
 # Configure data directory
@@ -181,6 +181,7 @@ def save_registration(user_data, start_time):
         "course_name": user_data["course_name"],
         "course_id": user_data["course_id"],
         "professor": user_data["professor"],
+        "professor_email": user_data["professor_email"],
         "usage_time_minutes": usage_time
     }
     
@@ -258,10 +259,21 @@ if not st.session_state.registered:
         
         professor = st.text_input("Professor's Name")
         
+        # Add Professor's Email field with validation
+        professor_email = st.text_input("Professor's Email", help="Must be an @fdu.edu email address")
+        
+        # Validate professor email domain
+        is_valid_professor_email = False
+        if professor_email:
+            professor_email = professor_email.lower()
+            is_valid_professor_email = professor_email.endswith('@fdu.edu')
+            if not is_valid_professor_email:
+                st.error("Professor's email must be an @fdu.edu address")
+        
         submitted = st.form_submit_button("Submit")
         
         if submitted:
-            if not all([full_name, student_id, email, course_id, professor]):
+            if not all([full_name, student_id, email, course_id, professor, professor_email]):
                 st.error("Please fill in all required fields.")
             elif not is_valid_student_id:
                 st.error("Please enter a valid 7-digit FDU Student ID.")
@@ -269,6 +281,8 @@ if not st.session_state.registered:
                 st.error("Please enter a valid FDU email address.")
             elif not is_valid_course_id:
                 st.error("Please enter a valid Course ID format.")
+            elif not is_valid_professor_email:
+                st.error("Please enter a valid FDU email address for the professor.")
             else:
                 # Save user data
                 st.session_state.user_data = {
@@ -280,7 +294,8 @@ if not st.session_state.registered:
                     "major": major,
                     "course_name": course_name,
                     "course_id": course_id,
-                    "professor": professor
+                    "professor": professor,
+                    "professor_email": professor_email
                 }
                 # Set start time with timezone
                 et_tz = ZoneInfo("America/New_York")
