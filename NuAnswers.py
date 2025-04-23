@@ -1188,16 +1188,187 @@ def track_hourly_usage():
     st.session_state.hourly_usage.append(entry)
     save_to_csv(entry, HOURLY_USAGE_PATH)
 
+def calculate_success_indicators(student_data):
+    """Calculate success indicators for a student based on their usage patterns"""
+    if student_data.empty:
+        return {}
+    
+    # Usage patterns
+    total_sessions = len(student_data)
+    total_hours = student_data['usage_time_minutes'].sum() / 60
+    avg_session_length = student_data['usage_time_minutes'].mean()
+    
+    # Engagement patterns
+    days_active = student_data['timestamp'].dt.date.nunique()
+    sessions_per_day = total_sessions / days_active if days_active > 0 else 0
+    
+    # Calculate consistency score (0-1)
+    date_range = (student_data['timestamp'].max() - student_data['timestamp'].min()).days + 1
+    consistency_score = days_active / date_range if date_range > 0 else 0
+    
+    return {
+        "total_sessions": total_sessions,
+        "total_hours": total_hours,
+        "avg_session_length": avg_session_length,
+        "days_active": days_active,
+        "sessions_per_day": sessions_per_day,
+        "consistency_score": consistency_score
+    }
+
+def calculate_topic_mastery(student_id):
+    """Calculate topic mastery levels for a student"""
+    student_topics = [t for t in st.session_state.topic_data if t.get('student_id') == student_id]
+    
+    topic_mastery = {}
+    for topic_data in student_topics:
+        topic = topic_data.get('topic', '')
+        difficulty = topic_data.get('difficulty', 0)
+        
+        if topic not in topic_mastery:
+            topic_mastery[topic] = {
+                'attempts': 0,
+                'total_difficulty': 0,
+                'completions': 0
+            }
+        
+        topic_mastery[topic]['attempts'] += 1
+        topic_mastery[topic]['total_difficulty'] += difficulty
+        
+        # Check if topic was completed successfully
+        completion_records = [c for c in st.session_state.completion_data 
+                            if c.get('student_id') == student_id and 
+                            c.get('topic') == topic and 
+                            c.get('completed', False)]
+        topic_mastery[topic]['completions'] += len(completion_records)
+    
+    # Calculate mastery scores
+    mastery_scores = {}
+    for topic, data in topic_mastery.items():
+        attempts = data['attempts']
+        avg_difficulty = data['total_difficulty'] / attempts if attempts > 0 else 0
+        completion_rate = data['completions'] / attempts if attempts > 0 else 0
+        
+        # Mastery score (0-1) based on completion rate and difficulty
+        mastery_scores[topic] = (completion_rate * 0.7 + (avg_difficulty / 5) * 0.3)
+    
+    return mastery_scores
+
+def predict_student_success(student_id):
+    """Predict student success based on various metrics"""
+    # Get student data
+    student_data = st.session_state.registration_data[
+        st.session_state.registration_data['student_id'] == student_id
+    ]
+    
+    # Get current semester
+    current_semester, current_year = get_current_semester()
+    
+    # Calculate base success indicators
+    success_indicators = calculate_success_indicators(student_data)
+    
+    # Calculate topic mastery
+    topic_mastery = calculate_topic_mastery(student_id)
+    
+    # Get feedback and satisfaction data
+    student_feedback = [f for f in st.session_state.feedback_data if f.get('student_id') == student_id]
+    avg_satisfaction = sum(f['rating'] for f in student_feedback) / len(student_feedback) if student_feedback else 0
+    
+    # Calculate engagement trend
+    if not student_data.empty:
+        student_data = student_data.sort_values('timestamp')
+        weekly_sessions = student_data.resample('W', on='timestamp')['student_id'].count()
+        engagement_trend = weekly_sessions.pct_change().mean() if len(weekly_sessions) > 1 else 0
+    else:
+        engagement_trend = 0
+    
+    # Calculate success probability
+    success_factors = {
+        'usage_score': min(success_indicators.get('total_hours', 0) / 10, 1),  # Cap at 10 hours
+        'consistency_score': success_indicators.get('consistency_score', 0),
+        'mastery_score': sum(topic_mastery.values()) / len(topic_mastery) if topic_mastery else 0,
+        'satisfaction_score': avg_satisfaction / 5 if avg_satisfaction > 0 else 0,
+        'engagement_trend': (engagement_trend + 1) / 2 if engagement_trend > -1 else 0  # Normalize to 0-1
+    }
+    
+    # Weight the factors
+    weights = {
+        'usage_score': 0.25,
+        'consistency_score': 0.25,
+        'mastery_score': 0.2,
+        'satisfaction_score': 0.15,
+        'engagement_trend': 0.15
+    }
+    
+    # Calculate overall success probability
+    success_probability = sum(score * weights[factor] for factor, score in success_factors.items())
+    
+    # Generate recommendations
+    recommendations = []
+    if success_factors['usage_score'] < 0.6:
+        recommendations.append("Increase total usage time")
+    if success_factors['consistency_score'] < 0.6:
+        recommendations.append("Maintain more regular study sessions")
+    if success_factors['mastery_score'] < 0.6:
+        recommendations.append("Focus on completing more topics")
+    if success_factors['satisfaction_score'] < 0.6:
+        recommendations.append("Engage more actively with the content")
+    if success_factors['engagement_trend'] < 0.5:
+        recommendations.append("Increase weekly engagement")
+    
+    # Identify areas of strength
+    strengths = [factor for factor, score in success_factors.items() if score >= 0.8]
+    
+    # Calculate risk level
+    risk_level = "Low" if success_probability >= 0.7 else "Medium" if success_probability >= 0.4 else "High"
+    
+    # Prepare prediction results
+    prediction = {
+        "timestamp": datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %H:%M:%S"),
+        "student_id": student_id,
+        "semester": current_semester,
+        "year": current_year,
+        "success_probability": success_probability,
+        "risk_level": risk_level,
+        "success_factors": success_factors,
+        "topic_mastery": topic_mastery,
+        "usage_metrics": success_indicators,
+        "recommendations": recommendations,
+        "strengths": strengths,
+        "avg_satisfaction": avg_satisfaction,
+        "engagement_trend": engagement_trend
+    }
+    
+    # Save prediction to session state and CSV
+    if "success_predictions" not in st.session_state:
+        st.session_state.success_predictions = []
+    
+    st.session_state.success_predictions.append(prediction)
+    save_to_csv(prediction, STUDENT_PERFORMANCE_PATH)
+    
+    return prediction
+
 def track_student_performance(student_id, usage_hours, success_rate):
-    """Track student performance metrics"""
+    """Enhanced student performance tracking with success prediction"""
+    # Calculate usage category
     usage_category = pd.cut([usage_hours], bins=[0, 5, 10, 15, float('inf')], 
                           labels=['Low', 'Medium', 'High', 'Very High'])[0]
+    
+    # Get success prediction
+    prediction = predict_student_success(student_id)
+    
+    # Combine metrics
     entry = {
         "timestamp": datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %H:%M:%S"),
         "student_id": student_id,
         "usage_hours": usage_hours,
         "success_rate": success_rate,
-        "usage_category": usage_category
+        "usage_category": usage_category,
+        "success_probability": prediction['success_probability'],
+        "risk_level": prediction['risk_level'],
+        "recommendations": prediction['recommendations']
     }
+    
     st.session_state.student_performance.append(entry)
     save_to_csv(entry, STUDENT_PERFORMANCE_PATH)
+    
+    return entry
