@@ -677,16 +677,15 @@ Example of bad tutoring:
                 save_feedback(rating, topic, difficulty)
                 track_topic(topic, difficulty)
                 track_completion(True)
-                track_feedback_trend(rating, None)  # Add suggestions parameter if needed
+                track_feedback_trend(rating, None)
                 
                 # Track department data if applicable
                 if "major" in st.session_state.user_data:
                     track_department_data(st.session_state.user_data["major"])
                 
-                # Track semester and yearly data
-                current_month = datetime.now(ZoneInfo("America/New_York")).month
-                semester = "Spring" if 1 <= current_month <= 5 else "Fall" if 8 <= current_month <= 12 else "Summer"
-                track_semester_data(semester)
+                # Track semester and yearly data with accurate semester classification
+                current_semester, current_year = get_current_semester()
+                track_semester_data(current_semester, current_year)
                 track_yearly_data()
                 
                 # Track usage patterns
@@ -934,16 +933,85 @@ def track_yearly_data():
     st.session_state.yearly_data.append(entry)
     save_to_csv(entry, YEARLY_DATA_PATH)
 
-def track_semester_data(semester):
-    """Track semester-specific metrics"""
-    current_year = datetime.now(ZoneInfo("America/New_York")).year
-    entry = {
-        "year": current_year,
-        "semester": semester,
-        "registrations": len(st.session_state.registration_data),
-        "unique_users": st.session_state.registration_data['student_id'].nunique(),
-        "total_usage": st.session_state.registration_data['usage_time_minutes'].sum()
+def get_current_semester():
+    """
+    Determine the current semester based on the academic calendar.
+    Academic Calendar 2024-2025:
+    - Fall 2024: 8/26/24 - 12/18/24
+    - Winter 2025: 1/2/25 - 1/20/25
+    - Spring 2025: 1/21/25 - 5/13/25
+    - Summer 2025: 5/19/25 - 8/9/25
+    """
+    current_date = datetime.now(ZoneInfo("America/New_York"))
+    
+    # Define semester date ranges
+    semester_dates = {
+        ("2024-08-26", "2024-12-18"): ("Fall", "2024"),
+        ("2025-01-02", "2025-01-20"): ("Winter", "2025"),
+        ("2025-01-21", "2025-05-13"): ("Spring", "2025"),
+        ("2025-05-19", "2025-08-09"): ("Summer", "2025")
     }
+    
+    current_date_str = current_date.strftime("%Y-%m-%d")
+    
+    for (start_date, end_date), (semester, year) in semester_dates.items():
+        if start_date <= current_date_str <= end_date:
+            return semester, year
+    
+    # If date falls between semesters, assign to the upcoming semester
+    if current_date_str < "2024-08-26":
+        return "Pre-Fall", "2024"
+    elif "2024-12-18" < current_date_str < "2025-01-02":
+        return "Winter-Break", "2024-2025"
+    elif "2025-01-20" < current_date_str < "2025-01-21":
+        return "Winter-Spring-Break", "2025"
+    elif "2025-05-13" < current_date_str < "2025-05-19":
+        return "Spring-Summer-Break", "2025"
+    elif current_date_str > "2025-08-09":
+        return "Post-Summer", "2025"
+    
+    return "Unknown", str(current_date.year)
+
+def track_semester_data(semester=None, year=None):
+    """Track semester-specific metrics with accurate semester classification"""
+    if semester is None or year is None:
+        semester, year = get_current_semester()
+    
+    # Get data for the current semester
+    semester_start = {
+        "Fall": "2024-08-26",
+        "Winter": "2025-01-02",
+        "Spring": "2025-01-21",
+        "Summer": "2025-05-19"
+    }.get(semester)
+    
+    semester_end = {
+        "Fall": "2024-12-18",
+        "Winter": "2025-01-20",
+        "Spring": "2025-05-13",
+        "Summer": "2025-08-09"
+    }.get(semester)
+    
+    if semester_start and semester_end:
+        # Filter registration data for the current semester
+        mask = (st.session_state.registration_data['timestamp'] >= semester_start) & \
+               (st.session_state.registration_data['timestamp'] <= semester_end)
+        semester_data = st.session_state.registration_data[mask]
+    else:
+        semester_data = st.session_state.registration_data
+    
+    entry = {
+        "year": year,
+        "semester": semester,
+        "start_date": semester_start,
+        "end_date": semester_end,
+        "registrations": len(semester_data),
+        "unique_users": semester_data['student_id'].nunique() if not semester_data.empty else 0,
+        "total_usage": semester_data['usage_time_minutes'].sum() if not semester_data.empty else 0,
+        "avg_session_length": semester_data['usage_time_minutes'].mean() if not semester_data.empty else 0,
+        "timestamp": datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %H:%M:%S")
+    }
+    
     st.session_state.semester_data.append(entry)
     save_to_csv(entry, SEMESTER_DATA_PATH)
 
