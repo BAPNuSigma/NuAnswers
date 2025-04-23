@@ -1027,9 +1027,11 @@ def calculate_department_metrics(department_data):
     
     # Calculate engagement metrics
     if not department_data.empty:
+        # Update to use tuple for groupby
+        repeat_users = department_data.groupby(('student_id',)).filter(lambda x: len(x) > 1)['student_id'].unique()
         metrics.update({
-            "repeat_users": len(department_data.groupby('student_id').filter(lambda x: len(x) > 1)['student_id'].unique()),
-            "repeat_user_rate": len(department_data.groupby('student_id').filter(lambda x: len(x) > 1)['student_id'].unique()) / department_data['student_id'].nunique(),
+            "repeat_users": len(repeat_users),
+            "repeat_user_rate": len(repeat_users) / department_data['student_id'].nunique() if department_data['student_id'].nunique() > 0 else 0,
         })
     
     return metrics
@@ -1066,6 +1068,21 @@ def track_department_data(department):
         current_semester_data = dept_data[mask]
     else:
         current_semester_data = dept_data
+    
+    # Calculate usage patterns
+    if not current_semester_data.empty:
+        # Update to use tuples for groupby operations
+        usage_patterns = {
+            "peak_usage_hour": current_semester_data.groupby(('timestamp.hour',))['student_id'].count().idxmax()[0],
+            "peak_usage_day": current_semester_data.groupby(('timestamp.day_name',))['student_id'].count().idxmax()[0],
+            "avg_daily_users": current_semester_data.groupby(('timestamp.date',))['student_id'].nunique().mean()
+        }
+    else:
+        usage_patterns = {
+            "peak_usage_hour": None,
+            "peak_usage_day": None,
+            "avg_daily_users": 0
+        }
     
     # Calculate current semester metrics
     current_metrics = calculate_department_metrics(current_semester_data)
@@ -1113,9 +1130,9 @@ def track_department_data(department):
     # Calculate usage patterns
     if not current_semester_data.empty:
         usage_patterns = {
-            "peak_usage_hour": current_semester_data['timestamp'].dt.hour.mode().iloc[0] if len(current_semester_data) > 0 else None,
-            "peak_usage_day": current_semester_data['timestamp'].dt.day_name().mode().iloc[0] if len(current_semester_data) > 0 else None,
-            "avg_daily_users": current_semester_data.groupby(current_semester_data['timestamp'].dt.date)['student_id'].nunique().mean()
+            "peak_usage_hour": current_semester_data.groupby(('timestamp.hour',))['student_id'].count().idxmax()[0],
+            "peak_usage_day": current_semester_data.groupby(('timestamp.day_name',))['student_id'].count().idxmax()[0],
+            "avg_daily_users": current_semester_data.groupby(('timestamp.date',))['student_id'].nunique().mean()
         }
     else:
         usage_patterns = {
@@ -1276,7 +1293,8 @@ def predict_student_success(student_id):
     # Calculate engagement trend
     if not student_data.empty:
         student_data = student_data.sort_values('timestamp')
-        weekly_sessions = student_data.resample('W', on='timestamp')['student_id'].count()
+        # Update to use tuple for groupby
+        weekly_sessions = student_data.groupby(pd.Grouper(key='timestamp', freq='W'))['student_id'].count()
         engagement_trend = weekly_sessions.pct_change().mean() if len(weekly_sessions) > 1 else 0
     else:
         engagement_trend = 0
