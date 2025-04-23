@@ -661,66 +661,69 @@ Example of bad tutoring:
 
     # Add a logout button
     if st.button("Logout"):
-        # Save final usage data before logout
-        save_registration(st.session_state.user_data, st.session_state.start_time)
+        st.session_state.logout_initiated = True
+        st.rerun()
+    
+    # Handle logout process with feedback
+    if st.session_state.logout_initiated and not st.session_state.feedback_submitted:
+        st.title("📝 Session Feedback")
+        st.write("Before you go, please provide some feedback about your session.")
         
+        feedback_col1, feedback_col2, feedback_col3 = st.columns(3)
+        
+        with feedback_col1:
+            topic = st.text_input("What topics did you discuss today?", key="logout_topic")
+        
+        with feedback_col2:
+            rating = st.slider("How helpful was this session?", 1, 5, 3, key="logout_rating")
+        
+        with feedback_col3:
+            difficulty = st.slider("How difficult were the topics?", 1, 5, 3, key="logout_difficulty")
+        
+        additional_feedback = st.text_area("Any additional comments or suggestions?", key="logout_comments")
+        
+        col1, col2 = st.columns([1, 5])
+        with col1:
+            if st.button("Submit Feedback"):
+                if topic:
+                    # Save final usage data
+                    save_registration(st.session_state.user_data, st.session_state.start_time)
+                    
+                    # Save feedback
+                    save_feedback(rating, topic, difficulty)
+                    track_topic(topic, difficulty)
+                    track_completion(True)
+                    
+                    # If there are additional comments, save them
+                    if additional_feedback:
+                        track_feedback_trend(rating, additional_feedback)
+                    else:
+                        track_feedback_trend(rating)
+                    
+                    st.session_state.feedback_submitted = True
+                    st.rerun()
+                else:
+                    st.error("Please enter the topics discussed.")
+            
+            if st.button("Skip Feedback"):
+                # Save final usage data without feedback
+                save_registration(st.session_state.user_data, st.session_state.start_time)
+                st.session_state.feedback_submitted = True
+                st.rerun()
+        
+        # Stop the rest of the app from rendering during feedback
+        st.stop()
+    
+    # Complete logout after feedback
+    if st.session_state.logout_initiated and st.session_state.feedback_submitted:
         # Reset session state
         st.session_state.registered = False
         st.session_state.start_time = None
         st.session_state.user_data = {}
         st.session_state.messages = []
+        st.session_state.logout_initiated = False
+        st.session_state.feedback_submitted = False
         st.rerun()
-
-    # Add feedback section after chat
-    if st.session_state.messages and len(st.session_state.messages) > 0:
-        st.divider()
-        st.subheader("📝 Session Feedback")
-        
-        feedback_col1, feedback_col2, feedback_col3 = st.columns(3)
-        
-        with feedback_col1:
-            topic = st.text_input("What topic did you discuss?", key="feedback_topic")
-        
-        with feedback_col2:
-            rating = st.slider("How helpful was this session?", 1, 5, 3, key="feedback_rating")
-        
-        with feedback_col3:
-            difficulty = st.slider("How difficult was the topic?", 1, 5, 3, key="feedback_difficulty")
-        
-        if st.button("Submit Feedback"):
-            if topic:
-                save_feedback(rating, topic, difficulty)
-                track_topic(topic, difficulty)
-                track_completion(True)
-                track_feedback_trend(rating, None)
-                
-                # Track department data if applicable
-                if "major" in st.session_state.user_data:
-                    track_department_data(st.session_state.user_data["major"])
-                
-                # Track semester and yearly data with accurate semester classification
-                current_semester, current_year = get_current_semester()
-                track_semester_data(current_semester, current_year)
-                track_yearly_data()
-                
-                # Track usage patterns
-                track_historical_usage()
-                track_hourly_usage()
-                
-                # Track student performance
-                if "user_data" in st.session_state and "registration_data" in st.session_state:
-                    student_id = st.session_state.user_data.get("student_id")
-                    if student_id:
-                        student_data = st.session_state.registration_data[
-                            st.session_state.registration_data['student_id'] == student_id
-                        ]
-                        usage_hours = student_data['usage_time_minutes'].sum() / 60
-                        success_rate = rating * 20  # Convert 1-5 rating to percentage
-                        track_student_performance(student_id, usage_hours, success_rate)
-                
-                st.success("Thank you for your feedback!")
-            else:
-                st.warning("Please enter the topic discussed.")
 
 def show_admin_panel():
     """Display admin panel with registration statistics"""
