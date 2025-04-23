@@ -112,18 +112,38 @@ def is_within_tutoring_hours():
     st.session_state.debug_time["reason"] = "Outside tutoring hours"
     return False
 
-# Initialize session state for registration and tracking
+# Initialize all session state variables
 if "registered" not in st.session_state:
     st.session_state.registered = False
 if "start_time" not in st.session_state:
     st.session_state.start_time = None
 if "user_data" not in st.session_state:
     st.session_state.user_data = {}
+if "messages" not in st.session_state:
+    st.session_state.messages = [
+        {"role": "assistant", "content": "Hello! I'm NuAnswers. I'm here to help you understand concepts and work through problems. What would you like to work on today?"}
+    ]
 if "registration_data" not in st.session_state:
     st.session_state.registration_data = pd.DataFrame(columns=[
         "timestamp", "full_name", "student_id", "email", "grade", "campus",
         "major", "course_name", "course_id", "professor", "professor_email", "usage_time_minutes"
     ])
+if "uploaded_documents" not in st.session_state:
+    st.session_state.uploaded_documents = []
+if "search_query" not in st.session_state:
+    st.session_state.search_query = ""
+if "doc_to_delete" not in st.session_state:
+    st.session_state.doc_to_delete = None
+if "feedback_data" not in st.session_state:
+    st.session_state.feedback_data = []
+if "topic_data" not in st.session_state:
+    st.session_state.topic_data = []
+if "completion_data" not in st.session_state:
+    st.session_state.completion_data = []
+if "logout_initiated" not in st.session_state:
+    st.session_state.logout_initiated = False
+if "feedback_submitted" not in st.session_state:
+    st.session_state.feedback_submitted = False
 
 # Configure data directory
 DATA_DIR = Path("/data" if os.path.exists("/data") else ".")
@@ -384,14 +404,6 @@ def extract_text_from_excel(file_path):
         return None
     return text
 
-# Initialize session state for uploaded documents and search
-if "uploaded_documents" not in st.session_state:
-    st.session_state.uploaded_documents = []
-if "search_query" not in st.session_state:
-    st.session_state.search_query = ""
-if "doc_to_delete" not in st.session_state:
-    st.session_state.doc_to_delete = None
-
 # Function to search within documents
 def search_in_documents(query, documents):
     if not query:
@@ -403,7 +415,7 @@ def search_in_documents(query, documents):
             results.append(doc)
     return results
 
-# Show title and description only after registration
+# Main application logic for registered users
 if st.session_state.registered:
     st.title("💬 NuAnswers")
     
@@ -570,18 +582,6 @@ if st.session_state.registered:
                         st.session_state.doc_to_delete = None
                         st.rerun()
 
-    # Create a session state variable to store the chat messages
-    if "messages" not in st.session_state:
-        st.session_state.messages = [
-            {"role": "assistant", "content": "Hello! I'm NuAnswers. I'm here to help you understand concepts and work through problems. What would you like to work on today?"}
-        ]
-
-    st.write(
-        "Hello! I am NuAnswers, Beta Alpha Psi: Nu Sigma Chapter's AI Tutor Bot. I'm here to help you understand concepts and work through problems. "
-        "Remember, I won't give you direct answers, but I'll guide you to find them yourself. "
-        "I can help you with accounting equations, financial ratios, financial statements, and time value of money concepts."
-    )
-
     # Display the existing chat messages
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
@@ -716,11 +716,12 @@ Example of bad tutoring:
     
     # Complete logout after feedback
     if st.session_state.logout_initiated and st.session_state.feedback_submitted:
-        # Reset session state
+        # Reset all session state variables
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        
+        # Reinitialize essential variables
         st.session_state.registered = False
-        st.session_state.start_time = None
-        st.session_state.user_data = {}
-        st.session_state.messages = []
         st.session_state.logout_initiated = False
         st.session_state.feedback_submitted = False
         st.rerun()
@@ -764,14 +765,6 @@ def show_admin_panel():
             st.info("No registration data available yet.")
     except Exception as e:
         st.error(f"Error loading registration data: {str(e)}")
-
-# Initialize session state for feedback and topic tracking
-if "feedback_data" not in st.session_state:
-    st.session_state.feedback_data = []
-if "topic_data" not in st.session_state:
-    st.session_state.topic_data = []
-if "completion_data" not in st.session_state:
-    st.session_state.completion_data = []
 
 def save_feedback(rating, topic, difficulty):
     """Save feedback data"""
