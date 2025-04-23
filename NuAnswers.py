@@ -417,6 +417,70 @@ def search_in_documents(query, documents):
 
 # Main application logic for registered users
 if st.session_state.registered:
+    # Handle logout process with feedback first
+    if st.session_state.logout_initiated and not st.session_state.feedback_submitted:
+        # Clear the page and show only feedback form
+        st.title("📝 Session Feedback")
+        st.write("Before you go, please provide some feedback about your session.")
+        
+        feedback_col1, feedback_col2, feedback_col3 = st.columns(3)
+        
+        with feedback_col1:
+            topic = st.text_input("What topics did you discuss today?", key="logout_topic")
+        
+        with feedback_col2:
+            rating = st.slider("How helpful was this session?", 1, 5, 3, key="logout_rating")
+        
+        with feedback_col3:
+            difficulty = st.slider("How difficult were the topics?", 1, 5, 3, key="logout_difficulty")
+        
+        additional_feedback = st.text_area("Any additional comments or suggestions?", key="logout_comments")
+        
+        col1, col2 = st.columns([1, 5])
+        with col1:
+            if st.button("Submit Feedback"):
+                if topic:
+                    # Save final usage data
+                    save_registration(st.session_state.user_data, st.session_state.start_time)
+                    
+                    # Save feedback
+                    save_feedback(rating, topic, difficulty)
+                    track_topic(topic, difficulty)
+                    track_completion(True)
+                    
+                    # If there are additional comments, save them
+                    if additional_feedback:
+                        track_feedback_trend(rating, additional_feedback)
+                    else:
+                        track_feedback_trend(rating)
+                    
+                    st.session_state.feedback_submitted = True
+                    st.rerun()
+                else:
+                    st.error("Please enter the topics discussed.")
+            
+            if st.button("Skip Feedback"):
+                # Save final usage data without feedback
+                save_registration(st.session_state.user_data, st.session_state.start_time)
+                st.session_state.feedback_submitted = True
+                st.rerun()
+        
+        # Stop here to prevent showing main app content
+        st.stop()
+    
+    # Complete logout after feedback
+    if st.session_state.logout_initiated and st.session_state.feedback_submitted:
+        # Reset all session state variables
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        
+        # Reinitialize essential variables
+        st.session_state.registered = False
+        st.session_state.logout_initiated = False
+        st.session_state.feedback_submitted = False
+        st.rerun()
+    
+    # Main application content
     st.title("💬 NuAnswers")
     
     # Check if current time is within tutoring hours
@@ -659,72 +723,17 @@ Example of bad tutoring:
                 st.session_state.current_topic
             )
 
-    # Add a logout button
-    if st.button("Logout"):
+    # Add a logout button at the top of the main content
+    if st.sidebar.button("Logout"):
         st.session_state.logout_initiated = True
         st.rerun()
     
-    # Handle logout process with feedback
-    if st.session_state.logout_initiated and not st.session_state.feedback_submitted:
-        st.title("📝 Session Feedback")
-        st.write("Before you go, please provide some feedback about your session.")
-        
-        feedback_col1, feedback_col2, feedback_col3 = st.columns(3)
-        
-        with feedback_col1:
-            topic = st.text_input("What topics did you discuss today?", key="logout_topic")
-        
-        with feedback_col2:
-            rating = st.slider("How helpful was this session?", 1, 5, 3, key="logout_rating")
-        
-        with feedback_col3:
-            difficulty = st.slider("How difficult were the topics?", 1, 5, 3, key="logout_difficulty")
-        
-        additional_feedback = st.text_area("Any additional comments or suggestions?", key="logout_comments")
-        
-        col1, col2 = st.columns([1, 5])
-        with col1:
-            if st.button("Submit Feedback"):
-                if topic:
-                    # Save final usage data
-                    save_registration(st.session_state.user_data, st.session_state.start_time)
-                    
-                    # Save feedback
-                    save_feedback(rating, topic, difficulty)
-                    track_topic(topic, difficulty)
-                    track_completion(True)
-                    
-                    # If there are additional comments, save them
-                    if additional_feedback:
-                        track_feedback_trend(rating, additional_feedback)
-                    else:
-                        track_feedback_trend(rating)
-                    
-                    st.session_state.feedback_submitted = True
-                    st.rerun()
-                else:
-                    st.error("Please enter the topics discussed.")
-            
-            if st.button("Skip Feedback"):
-                # Save final usage data without feedback
-                save_registration(st.session_state.user_data, st.session_state.start_time)
-                st.session_state.feedback_submitted = True
-                st.rerun()
-        
-        # Stop the rest of the app from rendering during feedback
-        st.stop()
-    
-    # Complete logout after feedback
-    if st.session_state.logout_initiated and st.session_state.feedback_submitted:
-        # Reset all session state variables
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        
-        # Reinitialize essential variables
-        st.session_state.registered = False
-        st.session_state.logout_initiated = False
-        st.session_state.feedback_submitted = False
-        st.rerun()
+    # Display the rest of the main application content
+    st.write(
+        "Hello! I am NuAnswers, Beta Alpha Psi: Nu Sigma Chapter's AI Tutor Bot. I'm here to help you understand concepts and work through problems. "
+        "Remember, I won't give you direct answers, but I'll guide you to find them yourself. "
+        "I can help you with accounting equations, financial ratios, financial statements, and time value of money concepts."
+    )
 
 def show_admin_panel():
     """Display admin panel with registration statistics"""
