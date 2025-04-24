@@ -92,6 +92,10 @@ MODEL_PRICING = {
     "gpt-4-vision-preview": {
         "input": 10.00,
         "output": 30.00
+    },
+    "gpt-4.1": {
+        "input": 2.00,
+        "output": 8.00
     }
 }
 
