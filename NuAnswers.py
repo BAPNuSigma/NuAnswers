@@ -669,7 +669,7 @@ if st.session_state.registered:
 
         # Generate a response using the OpenAI API
         stream = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4.1",
             messages=[
                 {"role": "system", "content": f"""You are an Accounting & Finance Tutor. Your role is to guide students through their homework and exam preparation through a conversational, step-by-step approach.
 
