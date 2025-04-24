@@ -61,6 +61,126 @@ if entered_password != admin_password:
 
 st.sidebar.success("✅ Admin access granted!")
 
+# Add API Cost Tracking section
+st.header("💰 API Cost Tracking")
+
+# Initialize API cost tracking in session state if not exists
+if "api_costs" not in st.session_state:
+    st.session_state.api_costs = {
+        "total_input_tokens": 0,
+        "total_output_tokens": 0,
+        "total_cost": 0.0,
+        "credit_balance": 98.04,  # Initial credit balance
+        "model_usage": {},  # Track usage by model
+        "daily_usage": []
+    }
+
+# Model pricing (per 1M tokens)
+MODEL_PRICING = {
+    "gpt-3.5-turbo": {
+        "input": 0.50,
+        "output": 1.50
+    },
+    "gpt-4": {
+        "input": 30.00,
+        "output": 60.00
+    },
+    "gpt-4-turbo": {
+        "input": 10.00,
+        "output": 30.00
+    },
+    "gpt-4-vision-preview": {
+        "input": 10.00,
+        "output": 30.00
+    }
+}
+
+# Calculate current costs
+col1, col2, col3 = st.columns(3)
+with col1:
+    st.metric("Total Input Tokens", f"{st.session_state.api_costs['total_input_tokens']:,}")
+with col2:
+    st.metric("Total Output Tokens", f"{st.session_state.api_costs['total_output_tokens']:,}")
+with col3:
+    st.metric("Total Cost ($)", f"${st.session_state.api_costs['total_cost']:.2f}")
+
+# Show credit balance
+remaining_balance = st.session_state.api_costs['credit_balance'] - st.session_state.api_costs['total_cost']
+st.metric("Remaining Credit Balance", f"${remaining_balance:.2f}")
+
+# Model usage breakdown
+st.subheader("Model Usage Breakdown")
+if st.session_state.api_costs['model_usage']:
+    model_data = []
+    for model, usage in st.session_state.api_costs['model_usage'].items():
+        input_cost = (usage['input_tokens'] / 1000000) * MODEL_PRICING[model]['input']
+        output_cost = (usage['output_tokens'] / 1000000) * MODEL_PRICING[model]['output']
+        total_cost = input_cost + output_cost
+        model_data.append({
+            "Model": model,
+            "Input Tokens": usage['input_tokens'],
+            "Output Tokens": usage['output_tokens'],
+            "Input Cost ($)": f"${input_cost:.2f}",
+            "Output Cost ($)": f"${output_cost:.2f}",
+            "Total Cost ($)": f"${total_cost:.2f}"
+        })
+    st.dataframe(pd.DataFrame(model_data))
+else:
+    st.info("No API usage data available yet.")
+
+# Add manual credit balance update
+st.subheader("Update Credit Balance")
+new_balance = st.number_input("Enter new credit balance ($)", min_value=0.0, value=st.session_state.api_costs['credit_balance'])
+if st.button("Update Balance"):
+    st.session_state.api_costs['credit_balance'] = new_balance
+    st.success("Credit balance updated successfully!")
+
+# Show daily usage chart
+st.subheader("Daily API Usage")
+if "daily_usage" in st.session_state.api_costs and st.session_state.api_costs['daily_usage']:
+    daily_data = pd.DataFrame(st.session_state.api_costs['daily_usage'])
+    daily_data['date'] = pd.to_datetime(daily_data['date'])
+    daily_data = daily_data.sort_values('date')
+    
+    # Create a line chart for daily usage
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=daily_data['date'],
+        y=daily_data['input_tokens'],
+        name='Input Tokens',
+        line=dict(color='blue')
+    ))
+    fig.add_trace(go.Scatter(
+        x=daily_data['date'],
+        y=daily_data['output_tokens'],
+        name='Output Tokens',
+        line=dict(color='red')
+    ))
+    
+    fig.update_layout(
+        title='Daily Token Usage',
+        xaxis_title='Date',
+        yaxis_title='Number of Tokens',
+        hovermode='x unified'
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+else:
+    st.info("No daily usage data available yet.")
+
+# Add a section for clearing API cost data
+st.subheader("Clear API Cost Data")
+if st.button("🗑️ Clear API Cost Data"):
+    st.session_state.api_costs = {
+        "total_input_tokens": 0,
+        "total_output_tokens": 0,
+        "total_cost": 0.0,
+        "credit_balance": st.session_state.api_costs['credit_balance'],  # Keep the current balance
+        "model_usage": {},
+        "daily_usage": []
+    }
+    st.success("API cost data cleared successfully!")
+
 # Configure data directory
 DATA_DIR = Path("/data" if os.path.exists("/data") else ".")
 REGISTRATION_DATA_PATH = DATA_DIR / "registration_data.csv"
