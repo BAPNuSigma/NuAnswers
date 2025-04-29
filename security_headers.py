@@ -3,7 +3,7 @@ from typing import Dict
 def get_security_headers() -> Dict[str, str]:
     """
     Return a dictionary of security headers to be applied to all responses.
-    These headers help protect against various web vulnerabilities.
+    These headers help protect against various web vulnerabilities and establish trust.
     """
     return {
         # Prevent browsers from interpreting files as a different MIME type
@@ -19,16 +19,29 @@ def get_security_headers() -> Dict[str, str]:
         'Referrer-Policy': 'strict-origin-when-cross-origin',
         
         # Specify valid sources for content
-        'Content-Security-Policy': "default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https:;",
+        'Content-Security-Policy': "\
+            default-src 'self' https:; \
+            script-src 'self' 'unsafe-inline' 'unsafe-eval' https: *.northwestern.edu; \
+            style-src 'self' 'unsafe-inline' https: fonts.googleapis.com; \
+            img-src 'self' data: https: *.northwestern.edu; \
+            font-src 'self' https: fonts.gstatic.com; \
+            connect-src 'self' https: api.nuanswers.org; \
+            frame-ancestors 'self'; \
+            form-action 'self'; \
+            base-uri 'self'; \
+            upgrade-insecure-requests;",
         
         # Enable HSTS (force HTTPS)
-        'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
-        
-        # Prevent MIME type sniffing
-        'X-Content-Type-Options': 'nosniff',
+        'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
         
         # Control browser features
-        'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+        'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
+        
+        # Add Northwestern University affiliation
+        'X-Institution': 'Northwestern University',
+        
+        # Add contact information for security researchers
+        'X-Security-Contact': 'security@nuanswers.org'
     }
 
 def apply_security_headers(response):
