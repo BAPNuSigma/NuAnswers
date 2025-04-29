@@ -23,7 +23,7 @@ services:
     healthCheckPath: /
     autoDeploy: true
     domains:
-      - nuanswers.onrender.com
+      - tutor-chatbot-fwpu.onrender.com
       - nuanswers.org
       - www.nuanswers.org
     routes:
