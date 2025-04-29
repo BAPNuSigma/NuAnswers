@@ -10,7 +10,7 @@ def get_security_headers() -> Dict[str, str]:
         'X-Content-Type-Options': 'nosniff',
         
         # Protect against clickjacking
-        'X-Frame-Options': 'SAMEORIGIN',
+        'X-Frame-Options': 'DENY',
         
         # Enable browser's XSS filter
         'X-XSS-Protection': '1; mode=block',
@@ -26,10 +26,11 @@ def get_security_headers() -> Dict[str, str]:
             img-src 'self' data: https: *.northwestern.edu; \
             font-src 'self' https: fonts.gstatic.com; \
             connect-src 'self' https: api.nuanswers.org; \
-            frame-ancestors 'self'; \
+            frame-ancestors 'none'; \
             form-action 'self'; \
             base-uri 'self'; \
-            upgrade-insecure-requests;",
+            upgrade-insecure-requests; \
+            block-all-mixed-content;",
         
         # Enable HSTS (force HTTPS)
         'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
@@ -41,7 +42,17 @@ def get_security_headers() -> Dict[str, str]:
         'X-Institution': 'Northwestern University',
         
         # Add contact information for security researchers
-        'X-Security-Contact': 'security@nuanswers.org'
+        'X-Security-Contact': 'security@nuanswers.org',
+        
+        # Add additional trust signals
+        'X-Powered-By': 'Render.com',
+        'X-DNS-Prefetch-Control': 'on',
+        'Expect-CT': 'max-age=86400, enforce',
+        
+        # Cross-Origin headers
+        'Cross-Origin-Opener-Policy': 'same-origin',
+        'Cross-Origin-Resource-Policy': 'same-site',
+        'Cross-Origin-Embedder-Policy': 'require-corp'
     }
 
 def apply_security_headers(response):

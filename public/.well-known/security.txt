@@ -1,0 +1,6 @@
+Contact: bapfdu@gmail.com
+Expires: 2025-12-31T23:59:59.000Z
+Preferred-Languages: en
+Canonical: https://nuanswers.org/.well-known/security.txt
+Policy: https://nuanswers.org/legal/security-policy
+Hiring: https://nuanswers.org/careers 
