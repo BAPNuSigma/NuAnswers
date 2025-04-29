@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Allow: /privacy-policy.html
+Allow: /terms-of-service.html
+Allow: /contact.html
+
+# Disallow admin and sensitive paths
+Disallow: /admin/
+Disallow: /api/
+Disallow: /internal/
+
+# Add sitemap once generated
+# Sitemap: https://nuanswers.org/sitemap.xml 
