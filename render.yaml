@@ -24,6 +24,8 @@ services:
     autoDeploy: true
     domains:
       - nuanswers.onrender.com
+      - nuanswers.org
+      - www.nuanswers.org
     routes:
       - type: rewrite
         source: /*
