@@ -112,6 +112,17 @@ def is_within_tutoring_hours():
     st.session_state.debug_time["reason"] = "Outside tutoring hours"
     return False
 
+# Configure data directory
+DATA_DIR = Path("/data" if os.path.exists("/data") else ".")
+REGISTRATION_DATA_PATH = DATA_DIR / "registration_data.csv"
+FEEDBACK_DATA_PATH = DATA_DIR / "feedback_data.csv"
+TOPIC_DATA_PATH = DATA_DIR / "topic_data.csv"
+COMPLETION_DATA_PATH = DATA_DIR / "completion_data.csv"
+RESPONSE_TIMES_PATH = DATA_DIR / "response_times.csv"
+
+# Create data directory if it doesn't exist
+DATA_DIR.mkdir(exist_ok=True)
+
 # Initialize all session state variables
 if "registered" not in st.session_state:
     st.session_state.registered = False
@@ -125,8 +136,8 @@ if "messages" not in st.session_state:
     ]
 if "registration_data" not in st.session_state:
     st.session_state.registration_data = pd.DataFrame(columns=[
-        "timestamp", "full_name", "student_id", "email", "grade", "campus",
-        "major", "course_name", "course_id", "professor", "professor_email", "usage_time_minutes"
+        "timestamp", "full_name", "grade", "campus",
+        "major", "course_name", "course_id", "professor", "usage_time_minutes"
     ])
 if "uploaded_documents" not in st.session_state:
     st.session_state.uploaded_documents = []
@@ -144,16 +155,8 @@ if "logout_initiated" not in st.session_state:
     st.session_state.logout_initiated = False
 if "feedback_submitted" not in st.session_state:
     st.session_state.feedback_submitted = False
-
-# Configure data directory
-DATA_DIR = Path("/data" if os.path.exists("/data") else ".")
-REGISTRATION_DATA_PATH = DATA_DIR / "registration_data.csv"
-FEEDBACK_DATA_PATH = DATA_DIR / "feedback_data.csv"
-TOPIC_DATA_PATH = DATA_DIR / "topic_data.csv"
-COMPLETION_DATA_PATH = DATA_DIR / "completion_data.csv"
-
-# Create data directory if it doesn't exist
-DATA_DIR.mkdir(exist_ok=True)
+if "response_times" not in st.session_state:
+    st.session_state.response_times = []
 
 def save_to_csv(data, filepath):
     """Save data to CSV file with error handling"""
@@ -193,15 +196,12 @@ def save_registration(user_data, start_time):
     new_registration = {
         "timestamp": end_time.strftime("%Y-%m-%d %H:%M:%S"),
         "full_name": user_data["full_name"],
-        "student_id": user_data["student_id"],
-        "email": user_data["email"],
         "grade": user_data["grade"],
         "campus": user_data["campus"],
         "major": user_data["major"],
         "course_name": user_data["course_name"],
         "course_id": user_data["course_id"],
         "professor": user_data["professor"],
-        "professor_email": user_data["professor_email"],
         "usage_time_minutes": usage_time
     }
     
@@ -228,22 +228,6 @@ if not st.session_state.registered:
     
     with st.form("registration_form", clear_on_submit=False):
         full_name = st.text_input("Full Name")
-        student_id = st.text_input("FDU Student ID (7 digits)")
-        
-        # Validate student ID format
-        is_valid_student_id = student_id.isdigit() and len(student_id) == 7
-        if student_id and not is_valid_student_id:
-            st.error("FDU Student ID must be exactly 7 digits.")
-            
-        email = st.text_input("FDU Student Email (@student.fdu.edu or @fdu.edu)")
-        
-        # Validate email domain
-        is_valid_email = False
-        if email:
-            email = email.lower()
-            is_valid_email = email.endswith('@student.fdu.edu') or email.endswith('@fdu.edu')
-            if not is_valid_email:
-                st.error("Please use your FDU email address (@student.fdu.edu or @fdu.edu)")
         
         grade = st.selectbox("Grade", ["Freshman", "Sophomore", "Junior", "Senior", "Graduate"])
         campus = st.selectbox("Campus", ["Florham", "Metro", "Vancouver"])
@@ -279,43 +263,23 @@ if not st.session_state.registered:
         
         professor = st.text_input("Professor's Name")
         
-        # Add Professor's Email field with validation
-        professor_email = st.text_input("Professor's Email", help="Must be an @fdu.edu email address")
-        
-        # Validate professor email domain
-        is_valid_professor_email = False
-        if professor_email:
-            professor_email = professor_email.lower()
-            is_valid_professor_email = professor_email.endswith('@fdu.edu')
-            if not is_valid_professor_email:
-                st.error("Professor's email must be an @fdu.edu address")
-        
         submitted = st.form_submit_button("Submit")
         
         if submitted:
-            if not all([full_name, student_id, email, course_id, professor, professor_email]):
+            if not all([full_name, course_id, professor]):
                 st.error("Please fill in all required fields.")
-            elif not is_valid_student_id:
-                st.error("Please enter a valid 7-digit FDU Student ID.")
-            elif not is_valid_email:
-                st.error("Please enter a valid FDU email address.")
             elif not is_valid_course_id:
                 st.error("Please enter a valid Course ID format.")
-            elif not is_valid_professor_email:
-                st.error("Please enter a valid FDU email address for the professor.")
             else:
                 # Save user data
                 st.session_state.user_data = {
                     "full_name": full_name,
-                    "student_id": student_id,
-                    "email": email,
                     "grade": grade,
                     "campus": campus,
                     "major": major,
                     "course_name": course_name,
                     "course_id": course_id,
-                    "professor": professor,
-                    "professor_email": professor_email
+                    "professor": professor
                 }
                 # Set start time with timezone
                 et_tz = ZoneInfo("America/New_York")
@@ -792,10 +756,9 @@ def show_admin_panel():
             # Show daily statistics
             st.subheader("Daily Statistics")
             daily_stats = df.groupby(df['timestamp'].dt.date).agg({
-                'student_id': 'count',
                 'usage_time_minutes': ['sum', 'mean']
             }).reset_index()
-            daily_stats.columns = ['Date', 'Registrations', 'Total Minutes', 'Avg Minutes']
+            daily_stats.columns = ['Date', 'Total Minutes', 'Avg Minutes']
             st.dataframe(daily_stats.sort_values('Date', ascending=False))
             
             # Show raw data
@@ -811,7 +774,6 @@ def save_feedback(rating, topic, difficulty):
     et_tz = ZoneInfo("America/New_York")
     feedback_entry = {
         "timestamp": datetime.now(et_tz).strftime("%Y-%m-%d %H:%M:%S"),
-        "student_id": st.session_state.user_data.get("student_id"),
         "course_id": st.session_state.user_data.get("course_id"),
         "rating": rating,
         "topic": topic,
@@ -825,7 +787,6 @@ def track_topic(topic, difficulty=None):
     et_tz = ZoneInfo("America/New_York")
     topic_entry = {
         "timestamp": datetime.now(et_tz).strftime("%Y-%m-%d %H:%M:%S"),
-        "student_id": st.session_state.user_data.get("student_id"),
         "course_id": st.session_state.user_data.get("course_id"),
         "topic": topic,
         "difficulty": difficulty
@@ -838,7 +799,6 @@ def track_completion(completed):
     et_tz = ZoneInfo("America/New_York")
     completion_entry = {
         "timestamp": datetime.now(et_tz).strftime("%Y-%m-%d %H:%M:%S"),
-        "student_id": st.session_state.user_data.get("student_id"),
         "course_id": st.session_state.user_data.get("course_id"),
         "completed": completed
     }
@@ -877,8 +837,6 @@ def analyze_image(file):
         return None
 
 # Initialize additional tracking systems in session state
-if "response_times" not in st.session_state:
-    st.session_state.response_times = []
 if "system_status" not in st.session_state:
     st.session_state.system_status = []
 if "content_access" not in st.session_state:
@@ -901,7 +859,6 @@ if "student_performance" not in st.session_state:
     st.session_state.student_performance = []
 
 # Configure additional data paths
-RESPONSE_TIMES_PATH = DATA_DIR / "response_times.csv"
 SYSTEM_STATUS_PATH = DATA_DIR / "system_status.csv"
 CONTENT_ACCESS_PATH = DATA_DIR / "content_access.csv"
 RESOLUTION_TIMES_PATH = DATA_DIR / "resolution_times.csv"
@@ -919,7 +876,7 @@ def track_response_time(start_time, end_time):
     entry = {
         "timestamp": end_time.strftime("%Y-%m-%d %H:%M:%S"),
         "response_time": response_time,
-        "user_id": st.session_state.user_data.get("student_id")
+        "user_id": st.session_state.user_data.get("full_name")
     }
     st.session_state.response_times.append(entry)
     save_to_csv(entry, RESPONSE_TIMES_PATH)
@@ -944,7 +901,7 @@ def track_content_access(content_id, content_type):
         "timestamp": datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %H:%M:%S"),
         "content_id": content_id,
         "content_type": content_type,
-        "user_id": st.session_state.user_data.get("student_id")
+        "user_id": st.session_state.user_data.get("full_name")
     }
     st.session_state.content_access.append(entry)
     save_to_csv(entry, CONTENT_ACCESS_PATH)
@@ -956,7 +913,7 @@ def track_resolution_time(start_time, end_time, topic):
         "timestamp": end_time.strftime("%Y-%m-%d %H:%M:%S"),
         "resolution_time": resolution_time,
         "topic": topic,
-        "user_id": st.session_state.user_data.get("student_id")
+        "user_id": st.session_state.user_data.get("full_name")
     }
     st.session_state.resolution_times.append(entry)
     save_to_csv(entry, RESOLUTION_TIMES_PATH)
@@ -967,7 +924,7 @@ def track_feedback_trend(satisfaction_score, suggestions=None):
         "date": datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d"),
         "satisfaction_score": satisfaction_score,
         "suggestions": suggestions,
-        "user_id": st.session_state.user_data.get("student_id")
+        "user_id": st.session_state.user_data.get("full_name")
     }
     st.session_state.feedback_trends.append(entry)
     save_to_csv(entry, FEEDBACK_TRENDS_PATH)
@@ -978,7 +935,7 @@ def track_yearly_data():
     entry = {
         "year": current_year,
         "registrations": len(st.session_state.registration_data),
-        "unique_users": st.session_state.registration_data['student_id'].nunique(),
+        "unique_users": st.session_state.registration_data['full_name'].nunique(),
         "total_usage": st.session_state.registration_data['usage_time_minutes'].sum()
     }
     st.session_state.yearly_data.append(entry)
@@ -1057,7 +1014,7 @@ def track_semester_data(semester=None, year=None):
         "start_date": semester_start,
         "end_date": semester_end,
         "registrations": len(semester_data),
-        "unique_users": semester_data['student_id'].nunique() if not semester_data.empty else 0,
+        "unique_users": semester_data['full_name'].nunique() if not semester_data.empty else 0,
         "total_usage": semester_data['usage_time_minutes'].sum() if not semester_data.empty else 0,
         "avg_session_length": semester_data['usage_time_minutes'].mean() if not semester_data.empty else 0,
         "timestamp": datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %H:%M:%S")
@@ -1069,20 +1026,20 @@ def track_semester_data(semester=None, year=None):
 def calculate_department_metrics(department_data):
     """Calculate comprehensive metrics for department performance"""
     metrics = {
-        "total_students": department_data['student_id'].nunique(),
+        "total_students": department_data['full_name'].nunique(),
         "total_sessions": len(department_data),
         "total_usage_hours": department_data['usage_time_minutes'].sum() / 60,
         "avg_session_length": department_data['usage_time_minutes'].mean(),
-        "avg_sessions_per_student": len(department_data) / department_data['student_id'].nunique() if department_data['student_id'].nunique() > 0 else 0,
+        "avg_sessions_per_student": len(department_data) / department_data['full_name'].nunique() if department_data['full_name'].nunique() > 0 else 0,
     }
     
     # Calculate engagement metrics
     if not department_data.empty:
         # Update to use tuple for groupby
-        repeat_users = department_data.groupby(('student_id',)).filter(lambda x: len(x) > 1)['student_id'].unique()
+        repeat_users = department_data.groupby(('full_name',)).filter(lambda x: len(x) > 1)['full_name'].unique()
         metrics.update({
             "repeat_users": len(repeat_users),
-            "repeat_user_rate": len(repeat_users) / department_data['student_id'].nunique() if department_data['student_id'].nunique() > 0 else 0,
+            "repeat_user_rate": len(repeat_users) / department_data['full_name'].nunique() if department_data['full_name'].nunique() > 0 else 0,
         })
     
     return metrics
@@ -1124,9 +1081,9 @@ def track_department_data(department):
     if not current_semester_data.empty:
         # Update to use tuples for groupby operations
         usage_patterns = {
-            "peak_usage_hour": current_semester_data.groupby(('timestamp.hour',))['student_id'].count().idxmax()[0],
-            "peak_usage_day": current_semester_data.groupby(('timestamp.day_name',))['student_id'].count().idxmax()[0],
-            "avg_daily_users": current_semester_data.groupby(('timestamp.date',))['student_id'].nunique().mean()
+            "peak_usage_hour": current_semester_data.groupby(('timestamp.hour',))['full_name'].count().idxmax()[0],
+            "peak_usage_day": current_semester_data.groupby(('timestamp.day_name',))['full_name'].count().idxmax()[0],
+            "avg_daily_users": current_semester_data.groupby(('timestamp.date',))['full_name'].nunique().mean()
         }
     else:
         usage_patterns = {
@@ -1140,7 +1097,7 @@ def track_department_data(department):
     
     # Calculate satisfaction metrics if feedback data exists
     dept_feedback = [f for f in st.session_state.feedback_data 
-                    if f.get('student_id') in dept_data['student_id'].unique()]
+                    if f.get('full_name') in dept_data['full_name'].unique()]
     
     satisfaction_metrics = {
         "avg_satisfaction": sum(f['rating'] for f in dept_feedback) / len(dept_feedback) if dept_feedback else 0,
@@ -1151,7 +1108,7 @@ def track_department_data(department):
     
     # Calculate topic performance
     dept_topics = [t for t in st.session_state.topic_data 
-                  if t.get('student_id') in dept_data['student_id'].unique()]
+                  if t.get('full_name') in dept_data['full_name'].unique()]
     
     topic_metrics = {}
     if dept_topics:
@@ -1171,7 +1128,7 @@ def track_department_data(department):
     
     # Calculate completion metrics
     dept_completions = [c for c in st.session_state.completion_data 
-                       if c.get('student_id') in dept_data['student_id'].unique()]
+                       if c.get('full_name') in dept_data['full_name'].unique()]
     
     completion_metrics = {
         "completion_rate": len([c for c in dept_completions if c.get('completed', False)]) / len(dept_completions) if dept_completions else 0,
@@ -1181,9 +1138,9 @@ def track_department_data(department):
     # Calculate usage patterns
     if not current_semester_data.empty:
         usage_patterns = {
-            "peak_usage_hour": current_semester_data.groupby(('timestamp.hour',))['student_id'].count().idxmax()[0],
-            "peak_usage_day": current_semester_data.groupby(('timestamp.day_name',))['student_id'].count().idxmax()[0],
-            "avg_daily_users": current_semester_data.groupby(('timestamp.date',))['student_id'].nunique().mean()
+            "peak_usage_hour": current_semester_data.groupby(('timestamp.hour',))['full_name'].count().idxmax()[0],
+            "peak_usage_day": current_semester_data.groupby(('timestamp.day_name',))['full_name'].count().idxmax()[0],
+            "avg_daily_users": current_semester_data.groupby(('timestamp.date',))['full_name'].nunique().mean()
         }
     else:
         usage_patterns = {
@@ -1238,7 +1195,7 @@ def track_historical_usage():
     entry = {
         "date": datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d"),
         "usage": st.session_state.registration_data['usage_time_minutes'].sum() / 60,  # Convert to hours
-        "unique_users": st.session_state.registration_data['student_id'].nunique()
+        "unique_users": st.session_state.registration_data['full_name'].nunique()
     }
     st.session_state.historical_usage.append(entry)
     save_to_csv(entry, HISTORICAL_USAGE_PATH)
@@ -1285,7 +1242,7 @@ def calculate_success_indicators(student_data):
 
 def calculate_topic_mastery(student_id):
     """Calculate topic mastery levels for a student"""
-    student_topics = [t for t in st.session_state.topic_data if t.get('student_id') == student_id]
+    student_topics = [t for t in st.session_state.topic_data if t.get('full_name') == student_id]
     
     topic_mastery = {}
     for topic_data in student_topics:
@@ -1304,7 +1261,7 @@ def calculate_topic_mastery(student_id):
         
         # Check if topic was completed successfully
         completion_records = [c for c in st.session_state.completion_data 
-                            if c.get('student_id') == student_id and 
+                            if c.get('full_name') == student_id and 
                             c.get('topic') == topic and 
                             c.get('completed', False)]
         topic_mastery[topic]['completions'] += len(completion_records)
@@ -1325,7 +1282,7 @@ def predict_student_success(student_id):
     """Predict student success based on various metrics"""
     # Get student data
     student_data = st.session_state.registration_data[
-        st.session_state.registration_data['student_id'] == student_id
+        st.session_state.registration_data['full_name'] == student_id
     ]
     
     # Get current semester
@@ -1338,14 +1295,14 @@ def predict_student_success(student_id):
     topic_mastery = calculate_topic_mastery(student_id)
     
     # Get feedback and satisfaction data
-    student_feedback = [f for f in st.session_state.feedback_data if f.get('student_id') == student_id]
+    student_feedback = [f for f in st.session_state.feedback_data if f.get('full_name') == student_id]
     avg_satisfaction = sum(f['rating'] for f in student_feedback) / len(student_feedback) if student_feedback else 0
     
     # Calculate engagement trend
     if not student_data.empty:
         student_data = student_data.sort_values('timestamp')
         # Update to use tuple for groupby
-        weekly_sessions = student_data.groupby(pd.Grouper(key='timestamp', freq='W'))['student_id'].count()
+        weekly_sessions = student_data.groupby(pd.Grouper(key='timestamp', freq='W'))['full_name'].count()
         engagement_trend = weekly_sessions.pct_change().mean() if len(weekly_sessions) > 1 else 0
     else:
         engagement_trend = 0
@@ -1393,7 +1350,7 @@ def predict_student_success(student_id):
     # Prepare prediction results
     prediction = {
         "timestamp": datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %H:%M:%S"),
-        "student_id": student_id,
+        "full_name": student_id,
         "semester": current_semester,
         "year": current_year,
         "success_probability": success_probability,
@@ -1428,7 +1385,7 @@ def track_student_performance(student_id, usage_hours, success_rate):
     # Combine metrics
     entry = {
         "timestamp": datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %H:%M:%S"),
-        "student_id": student_id,
+        "full_name": student_id,
         "usage_hours": usage_hours,
         "success_rate": success_rate,
         "usage_category": usage_category,
