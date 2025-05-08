@@ -46,16 +46,19 @@ st.markdown("""
 st.title("👨‍💼 Administrator Dashboard")
 
 # Admin authentication
-admin_password = os.environ.get("ADMIN_PASSWORD") or st.secrets.get("ADMIN_PASSWORD")
+admin_passwords = os.environ.get("ADMIN_PASSWORD") or st.secrets.get("ADMIN_PASSWORD")
 
-if not admin_password:
+if not admin_passwords:
     st.error("Admin password not configured. Please set ADMIN_PASSWORD in environment variables or secrets.toml")
     st.stop()
+
+# Support multiple passwords separated by comma
+admin_password_list = [p.strip() for p in admin_passwords.split(",") if p.strip()]
 
 # Password protection
 entered_password = st.sidebar.text_input("Enter Admin Password", type="password")
 
-if entered_password != admin_password:
+if entered_password not in admin_password_list:
     st.error("❌ Please enter the correct admin password to view statistics")
     st.stop()
 
