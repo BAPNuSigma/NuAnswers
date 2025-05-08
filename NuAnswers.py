@@ -624,6 +624,18 @@ if st.session_state.registered:
         with st.chat_message("user"):
             st.markdown(prompt)
 
+        # Place this before the chat input logic (before the first use of track_response_time)
+        def track_response_time(start_time, end_time):
+            """Track system response time"""
+            response_time = (end_time - start_time).total_seconds()
+            entry = {
+                "timestamp": end_time.strftime("%Y-%m-%d %H:%M:%S"),
+                "response_time": response_time,
+                "user_id": st.session_state.user_data.get("full_name")
+            }
+            st.session_state.response_times.append(entry)
+            save_to_csv(entry, RESPONSE_TIMES_PATH)
+
         # Prepare context from uploaded documents
         context = ""
         if st.session_state.uploaded_documents:
@@ -869,17 +881,6 @@ DEPARTMENT_DATA_PATH = DATA_DIR / "department_data.csv"
 HISTORICAL_USAGE_PATH = DATA_DIR / "historical_usage.csv"
 HOURLY_USAGE_PATH = DATA_DIR / "hourly_usage.csv"
 STUDENT_PERFORMANCE_PATH = DATA_DIR / "student_performance.csv"
-
-def track_response_time(start_time, end_time):
-    """Track system response time"""
-    response_time = (end_time - start_time).total_seconds()
-    entry = {
-        "timestamp": end_time.strftime("%Y-%m-%d %H:%M:%S"),
-        "response_time": response_time,
-        "user_id": st.session_state.user_data.get("full_name")
-    }
-    st.session_state.response_times.append(entry)
-    save_to_csv(entry, RESPONSE_TIMES_PATH)
 
 def track_system_status(status, start_time, end_time=None):
     """Track system uptime and status"""
