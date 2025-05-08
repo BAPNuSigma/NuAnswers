@@ -227,7 +227,7 @@ def update_major():
 # Registration form
 if not st.session_state.registered:
     st.title("📝 Registration Form")
-    st.write("Please complete the registration form to use NuAnswers. DISCLAIMER: All information will be kept private and not shared with anyone. This email will not be shared with anyone and will only be used for by BAP: Nu Sigma Chapter.")
+    st.write("Please complete the registration form to use NuAnswers. DISCLAIMER: All information will be kept private and not shared with anyone. This will not be shared with anyone and will only be used for by BAP: Nu Sigma Chapter.")
     
     with st.form("registration_form", clear_on_submit=False):
         full_name = st.text_input("Full Name")
@@ -501,6 +501,36 @@ if st.session_state.registered:
 
     # Create an OpenAI client
     client = OpenAI(api_key=openai_api_key)
+
+    # Move these two functions above the file upload section
+    def encode_image_to_base64(file):
+        """Convert uploaded image file to base64 string"""
+        return base64.b64encode(file.getvalue()).decode('utf-8')
+
+    def analyze_image(file):
+        """Analyze image content using OpenAI's GPT-4 Vision model"""
+        try:
+            base64_image = encode_image_to_base64(file)
+            response = client.chat.completions.create(
+                model="gpt-4-vision-preview",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": "Please analyze this image in the context of accounting, finance, or business studies. Describe any relevant equations, problems, charts, or concepts shown."},
+                            {
+                                "type": "image_url",
+                                "image_url": f"data:image/jpeg;base64,{base64_image}"
+                            }
+                        ]
+                    }
+                ],
+                max_tokens=300
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            st.error(f"Error analyzing image: {str(e)}")
+            return None
 
     # File upload section
     st.subheader("📄 Upload Course Materials")
@@ -791,71 +821,6 @@ def track_completion(completed):
     }
     st.session_state.completion_data.append(completion_entry)
     save_to_csv(completion_entry, COMPLETION_DATA_PATH)
-
-def encode_image_to_base64(file):
-    """Convert uploaded image file to base64 string"""
-    return base64.b64encode(file.getvalue()).decode('utf-8')
-
-def analyze_image(file):
-    """Analyze image content using OpenAI's GPT-4 Vision model"""
-    try:
-        base64_image = encode_image_to_base64(file)
-        
-        response = client.chat.completions.create(
-            model="gpt-4-vision-preview",
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": "Please analyze this image in the context of accounting, finance, or business studies. Describe any relevant equations, problems, charts, or concepts shown."},
-                        {
-                            "type": "image_url",
-                            "image_url": f"data:image/jpeg;base64,{base64_image}"
-                        }
-                    ]
-                }
-            ],
-            max_tokens=300
-        )
-        
-        return response.choices[0].message.content
-    except Exception as e:
-        st.error(f"Error analyzing image: {str(e)}")
-        return None
-
-# Initialize additional tracking systems in session state
-if "system_status" not in st.session_state:
-    st.session_state.system_status = []
-if "content_access" not in st.session_state:
-    st.session_state.content_access = []
-if "resolution_times" not in st.session_state:
-    st.session_state.resolution_times = []
-if "feedback_trends" not in st.session_state:
-    st.session_state.feedback_trends = []
-if "yearly_data" not in st.session_state:
-    st.session_state.yearly_data = []
-if "semester_data" not in st.session_state:
-    st.session_state.semester_data = []
-if "department_data" not in st.session_state:
-    st.session_state.department_data = []
-if "historical_usage" not in st.session_state:
-    st.session_state.historical_usage = []
-if "hourly_usage" not in st.session_state:
-    st.session_state.hourly_usage = []
-if "student_performance" not in st.session_state:
-    st.session_state.student_performance = []
-
-# Configure additional data paths
-SYSTEM_STATUS_PATH = DATA_DIR / "system_status.csv"
-CONTENT_ACCESS_PATH = DATA_DIR / "content_access.csv"
-RESOLUTION_TIMES_PATH = DATA_DIR / "resolution_times.csv"
-FEEDBACK_TRENDS_PATH = DATA_DIR / "feedback_trends.csv"
-YEARLY_DATA_PATH = DATA_DIR / "yearly_data.csv"
-SEMESTER_DATA_PATH = DATA_DIR / "semester_data.csv"
-DEPARTMENT_DATA_PATH = DATA_DIR / "department_data.csv"
-HISTORICAL_USAGE_PATH = DATA_DIR / "historical_usage.csv"
-HOURLY_USAGE_PATH = DATA_DIR / "hourly_usage.csv"
-STUDENT_PERFORMANCE_PATH = DATA_DIR / "student_performance.csv"
 
 def track_system_status(status, start_time, end_time=None):
     """Track system uptime and status"""
