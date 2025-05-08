@@ -707,44 +707,6 @@ Example of bad tutoring:
     if st.sidebar.button("Logout"):
         st.session_state.logout_initiated = True
         st.rerun()
-    
-    # Display the rest of the main application content
-    st.write(
-        "Hello! I am NuAnswers, Beta Alpha Psi: Nu Sigma Chapter's AI Tutor Bot. I'm here to help you understand concepts and work through problems. "
-        "Remember, I won't give you direct answers, but I'll guide you to find them yourself. "
-        "I can help you with accounting equations, financial ratios, financial statements, and time value of money concepts."
-    )
-
-    # Add footer with legal links
-    st.markdown("""
-    <style>
-        .footer {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background-color: #f8f9fa;
-            padding: 10px 0;
-            text-align: center;
-            border-top: 1px solid #ddd;
-            font-size: 0.8em;
-        }
-        .footer a {
-            color: #666;
-            text-decoration: none;
-            margin: 0 10px;
-        }
-        .footer a:hover {
-            text-decoration: underline;
-        }
-    </style>
-    <div class="footer">
-        <a href="/privacy-policy.html" target="_blank">Privacy Policy</a> |
-        <a href="/terms-of-service.html" target="_blank">Terms of Service</a> |
-        <a href="/contact.html" target="_blank">Contact Us</a>
-        <p style="margin-top: 5px; color: #999;">© 2024 NuAnswers. All rights reserved.</p>
-    </div>
-    """, unsafe_allow_html=True)
 
 def show_admin_panel():
     """Display admin panel with registration statistics"""
