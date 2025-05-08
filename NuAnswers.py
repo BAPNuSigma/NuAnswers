@@ -136,8 +136,8 @@ if "messages" not in st.session_state:
     ]
 if "registration_data" not in st.session_state:
     st.session_state.registration_data = pd.DataFrame(columns=[
-        "timestamp", "full_name", "grade", "campus",
-        "major", "course_name", "course_id", "professor", "usage_time_minutes"
+        "timestamp", "full_name", "student_id", "student_email", "grade", "campus",
+        "major", "course_name", "course_id", "professor", "professor_email", "usage_time_minutes"
     ])
 if "uploaded_documents" not in st.session_state:
     st.session_state.uploaded_documents = []
@@ -196,12 +196,15 @@ def save_registration(user_data, start_time):
     new_registration = {
         "timestamp": end_time.strftime("%Y-%m-%d %H:%M:%S"),
         "full_name": user_data["full_name"],
+        "student_id": user_data["student_id"],
+        "student_email": user_data["student_email"],
         "grade": user_data["grade"],
         "campus": user_data["campus"],
         "major": user_data["major"],
         "course_name": user_data["course_name"],
         "course_id": user_data["course_id"],
         "professor": user_data["professor"],
+        "professor_email": user_data["professor_email"],
         "usage_time_minutes": usage_time
     }
     
@@ -224,26 +227,23 @@ def update_major():
 # Registration form
 if not st.session_state.registered:
     st.title("📝 Registration Form")
-    st.write("Please complete the registration form to use NuAnswers.")
+    st.write("Please complete the registration form to use NuAnswers. DISCLAIMER: All information will be kept private and not shared with anyone. This email will not be shared with anyone and will only be used for by BAP: Nu Sigma Chapter.")
     
     with st.form("registration_form", clear_on_submit=False):
         full_name = st.text_input("Full Name")
-        
+        student_id = st.text_input("FDU Student ID (7 digits)")
+        student_email = st.text_input("FDU Student Email (@student.fdu.edu or @fdu.edu)")
         grade = st.selectbox("Grade", ["Freshman", "Sophomore", "Junior", "Senior", "Graduate"])
         campus = st.selectbox("Campus", ["Florham", "Metro", "Vancouver"])
-        
-        # Major selection
         major = st.selectbox(
             "Major",
             ["Accounting", "Finance", "MIS [Management Information Systems]"]
         )
-        
-        # General course question
         course_name = st.text_input("Which class are you taking that relates to what you need help in?")
-        
-        # Course ID with validation
         course_id = st.text_input("Course ID (Format: DEPT_####_##)", help="Examples: ACCT_2021_01, FIN_3250_02")
-        
+        professor = st.text_input("Professor's Name")
+        professor_email = st.text_input("Professor's Email")
+
         # Validate course ID format
         is_valid_course_id = False
         if course_id:
@@ -260,34 +260,43 @@ if not st.session_state.registered:
                 - WMA_####_##
                 Where # represents a digit.
                 """)
-        
-        professor = st.text_input("Professor's Name")
-        
+        # Validate Student ID and Email
+        is_valid_student_id = student_id.isdigit() and len(student_id) == 7
+        is_valid_student_email = student_email.endswith("@student.fdu.edu") or student_email.endswith("@fdu.edu")
+        if student_id and not is_valid_student_id:
+            st.error("Student ID must be exactly 7 digits.")
+        if student_email and not is_valid_student_email:
+            st.error("Email must be a valid FDU email address.")
+
         submitted = st.form_submit_button("Submit")
-        
         if submitted:
-            if not all([full_name, course_id, professor]):
+            if not all([full_name, student_id, student_email, course_id, professor, professor_email]):
                 st.error("Please fill in all required fields.")
+            elif not is_valid_student_id:
+                st.error("Student ID must be exactly 7 digits.")
+            elif not is_valid_student_email:
+                st.error("Email must be a valid FDU email address.")
             elif not is_valid_course_id:
                 st.error("Please enter a valid Course ID format.")
             else:
                 # Save user data
                 st.session_state.user_data = {
                     "full_name": full_name,
+                    "student_id": student_id,
+                    "student_email": student_email,
                     "grade": grade,
                     "campus": campus,
                     "major": major,
                     "course_name": course_name,
                     "course_id": course_id,
-                    "professor": professor
+                    "professor": professor,
+                    "professor_email": professor_email
                 }
                 # Set start time with timezone
                 et_tz = ZoneInfo("America/New_York")
                 st.session_state.start_time = datetime.now(et_tz)
-                
                 # Save registration data
                 save_registration(st.session_state.user_data, st.session_state.start_time)
-                
                 # Set registered state
                 st.session_state.registered = True
                 st.rerun()
