@@ -381,6 +381,13 @@ def search_in_documents(query, documents):
 
 # Main application logic for registered users
 if st.session_state.registered:
+    # Show the introduction message once at the top
+    st.title("💬 NuAnswers")
+    st.write(
+        "Hello! I am NuAnswers, Beta Alpha Psi: Nu Sigma Chapter's AI Tutor Bot. I'm here to help you understand concepts and work through problems. "
+        "Remember, I won't give you direct answers, but I'll guide you to find them yourself. "
+        "I can help you with accounting equations, financial ratios, financial statements, and time value of money concepts."
+    )
     # Handle logout process with feedback first
     if st.session_state.logout_initiated and not st.session_state.feedback_submitted:
         # Clear the page and show only feedback form
@@ -443,9 +450,6 @@ if st.session_state.registered:
         st.session_state.logout_initiated = False
         st.session_state.feedback_submitted = False
         st.rerun()
-    
-    # Main application content
-    st.title("💬 NuAnswers")
     
     # Check if current time is within tutoring hours
     if is_within_tutoring_hours():
