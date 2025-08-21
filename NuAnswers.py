@@ -52,11 +52,11 @@ st.markdown("""
 
 # Tutoring hours configuration (in 24-hour format)
 TUTORING_HOURS = {
-    "Monday": [("10:30", "12:30")],    # 10:30 AM - 12:30 PM
-    "Tuesday": [("17:00", "19:00")],   # 5:00 PM - 7:00 PM
-    "Wednesday": [("12:00", "14:00")], # 12:00 PM - 2:00 PM
-    "Thursday": [("10:30", "12:30")],  # 10:30 AM - 12:30 PM
-    "Friday": [("13:00", "15:00")],    # 1:00 PM - 3:00 PM
+    "Monday": [("9:00", "11:00")],    # 9:00 AM - 11:00 AM
+    "Tuesday": [("9:00", "11:00")],   # 9:00 AM - 11:00 AM
+    "Wednesday": [("9:00", "11:00")], # 9:00 AM - 11:00 AM
+    "Thursday": [("9:00", "11:00")],  # 9:00 AM - 11:00 AM
+    "Friday": [("9:00", "11:00")],    # 9:00 AM - 11:00 AM
 }
 
 def is_within_tutoring_hours():
