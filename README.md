@@ -647,6 +647,7 @@ Nuanswers is protected under the [LICENSE](https://choosealicense.com/licenses) 
 
 ## ✨ Acknowledgments
 
+- **Jack Mitchell** for beccoming the Founding Father and Creator of NuAnswers
 - **Beta Alpha Psi: Nu Sigma Chapter**
 - **OpenAI** for GPT API and GPT-4 Vision
 - **Streamlit** for the web framework
