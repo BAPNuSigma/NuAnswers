@@ -119,6 +119,16 @@ FEEDBACK_DATA_PATH = DATA_DIR / "feedback_data.csv"
 TOPIC_DATA_PATH = DATA_DIR / "topic_data.csv"
 COMPLETION_DATA_PATH = DATA_DIR / "completion_data.csv"
 RESPONSE_TIMES_PATH = DATA_DIR / "response_times.csv"
+SYSTEM_STATUS_PATH = DATA_DIR / "system_status.csv"
+CONTENT_ACCESS_PATH = DATA_DIR / "content_access.csv"
+RESOLUTION_TIMES_PATH = DATA_DIR / "resolution_times.csv"
+FEEDBACK_TRENDS_PATH = DATA_DIR / "feedback_trends.csv"
+YEARLY_DATA_PATH = DATA_DIR / "yearly_data.csv"
+SEMESTER_DATA_PATH = DATA_DIR / "semester_data.csv"
+DEPARTMENT_DATA_PATH = DATA_DIR / "department_data.csv"
+HISTORICAL_USAGE_PATH = DATA_DIR / "historical_usage.csv"
+HOURLY_USAGE_PATH = DATA_DIR / "hourly_usage.csv"
+STUDENT_PERFORMANCE_PATH = DATA_DIR / "student_performance.csv"
 
 # Create data directory if it doesn't exist
 DATA_DIR.mkdir(exist_ok=True)
@@ -157,6 +167,26 @@ if "feedback_submitted" not in st.session_state:
     st.session_state.feedback_submitted = False
 if "response_times" not in st.session_state:
     st.session_state.response_times = []
+if "system_status" not in st.session_state:
+    st.session_state.system_status = []
+if "content_access" not in st.session_state:
+    st.session_state.content_access = []
+if "resolution_times" not in st.session_state:
+    st.session_state.resolution_times = []
+if "feedback_trends" not in st.session_state:
+    st.session_state.feedback_trends = []
+if "yearly_data" not in st.session_state:
+    st.session_state.yearly_data = []
+if "semester_data" not in st.session_state:
+    st.session_state.semester_data = []
+if "department_data" not in st.session_state:
+    st.session_state.department_data = []
+if "historical_usage" not in st.session_state:
+    st.session_state.historical_usage = []
+if "hourly_usage" not in st.session_state:
+    st.session_state.hourly_usage = []
+if "student_performance" not in st.session_state:
+    st.session_state.student_performance = []
 
 def save_to_csv(data, filepath):
     """Save data to CSV file with error handling"""
@@ -388,6 +418,74 @@ def search_in_documents(query, documents):
             results.append(doc)
     return results
 
+
+MAX_CONTEXT_DOCUMENTS = 5
+MAX_CONTEXT_CHARS_PER_DOC = 2500
+
+
+def build_uploaded_file_key(file):
+    """Create a stable key so reruns don't duplicate uploads."""
+    return f"{file.name}:{len(file.getvalue())}"
+
+
+def select_documents_for_prompt(prompt, documents, max_documents=MAX_CONTEXT_DOCUMENTS):
+    """Pick documents that are most relevant to the current prompt."""
+    if not documents:
+        return []
+
+    terms = [term for term in re.findall(r"\w+", prompt.lower()) if len(term) > 2]
+    if not terms:
+        return documents[:max_documents]
+
+    scored_docs = []
+    for doc in documents:
+        name = doc.get("name", "").lower()
+        content = doc.get("content", "").lower()
+        score = sum((name.count(term) * 3) + content.count(term) for term in terms)
+        scored_docs.append((score, doc))
+
+    scored_docs.sort(key=lambda item: item[0], reverse=True)
+    ranked_docs = [doc for score, doc in scored_docs if score > 0]
+    if not ranked_docs:
+        ranked_docs = [doc for _, doc in scored_docs]
+    return ranked_docs[:max_documents]
+
+
+def extract_relevant_excerpt(query, content, max_chars=MAX_CONTEXT_CHARS_PER_DOC):
+    """Return a bounded excerpt centered around matching query text."""
+    if not content:
+        return ""
+
+    normalized_content = content.strip()
+    if len(normalized_content) <= max_chars:
+        return normalized_content
+
+    lower_content = normalized_content.lower()
+    lower_query = query.strip().lower()
+    query_terms = [lower_query] if lower_query else []
+    query_terms.extend(term for term in re.findall(r"\w+", lower_query) if len(term) > 2)
+
+    match_index = -1
+    for term in query_terms:
+        idx = lower_content.find(term)
+        if idx != -1 and (match_index == -1 or idx < match_index):
+            match_index = idx
+
+    if match_index == -1:
+        return normalized_content[:max_chars] + "..."
+
+    half_window = max_chars // 2
+    start = max(match_index - half_window, 0)
+    end = min(start + max_chars, len(normalized_content))
+    start = max(end - max_chars, 0)
+
+    excerpt = normalized_content[start:end]
+    if start > 0:
+        excerpt = "..." + excerpt
+    if end < len(normalized_content):
+        excerpt = excerpt + "..."
+    return excerpt
+
 # Main application logic for registered users
 if st.session_state.registered:
     # Show the introduction message once at the top
@@ -541,33 +639,41 @@ if st.session_state.registered:
     )
     
     if uploaded_files:
+        existing_file_keys = {doc.get("file_key") for doc in st.session_state.uploaded_documents}
         for file in uploaded_files:
-            if file not in [doc['file'] for doc in st.session_state.uploaded_documents]:
-                file_extension = Path(file.name).suffix.lower()
-                
-                # Handle image files differently
-                if file_extension in ['.png', '.jpg', '.jpeg']:
-                    # Analyze image content
-                    image_analysis = analyze_image(file)
-                    
+            file_key = build_uploaded_file_key(file)
+            if file_key in existing_file_keys:
+                continue
+
+            file_extension = Path(file.name).suffix.lower()
+
+            # Handle image files differently
+            if file_extension in ['.png', '.jpg', '.jpeg']:
+                # Analyze image content
+                image_analysis = analyze_image(file)
+
+                st.session_state.uploaded_documents.append({
+                    'file': file,
+                    'name': file.name,
+                    'file_key': file_key,
+                    'content': f"[Image Analysis: {image_analysis}]" if image_analysis else f"[Image File: {file.name}]",
+                    'is_image': True,
+                    'image_analysis': image_analysis
+                })
+                existing_file_keys.add(file_key)
+                st.success(f"Successfully uploaded and analyzed image {file.name}")
+            else:
+                text = extract_text_from_file(file)
+                if text:
                     st.session_state.uploaded_documents.append({
                         'file': file,
                         'name': file.name,
-                        'content': f"[Image Analysis: {image_analysis}]" if image_analysis else f"[Image File: {file.name}]",
-                        'is_image': True,
-                        'image_analysis': image_analysis
+                        'file_key': file_key,
+                        'content': text,
+                        'is_image': False
                     })
-                    st.success(f"Successfully uploaded and analyzed image {file.name}")
-                else:
-                    text = extract_text_from_file(file)
-                    if text:
-                        st.session_state.uploaded_documents.append({
-                            'file': file,
-                            'name': file.name,
-                            'content': text,
-                            'is_image': False
-                        })
-                        st.success(f"Successfully processed {file.name}")
+                    existing_file_keys.add(file_key)
+                    st.success(f"Successfully processed {file.name}")
     
     # Search and document management section
     if st.session_state.uploaded_documents:
@@ -682,9 +788,13 @@ if st.session_state.registered:
         # Prepare context from uploaded documents
         context = ""
         if st.session_state.uploaded_documents:
-            context = "\n\n".join([f"Document: {doc['name']}\nContent: {doc['content']}" 
-                                 for doc in st.session_state.uploaded_documents])
-            context = f"Here is the context from uploaded documents:\n\n{context}\n\n"
+            relevant_docs = select_documents_for_prompt(prompt, st.session_state.uploaded_documents)
+            context_blocks = []
+            for doc in relevant_docs:
+                excerpt = extract_relevant_excerpt(prompt, doc.get("content", ""))
+                context_blocks.append(f"Document: {doc['name']}\nRelevant excerpt: {excerpt}")
+            context = "\n\n".join(context_blocks)
+            context = f"Here is relevant context from uploaded documents:\n\n{context}\n\n"
 
         # Generate a response using the OpenAI API
         stream = client.chat.completions.create(
