@@ -1,0 +1,48 @@
+services:
+  - type: web
+    name: nuanswers
+    env: python
+    plan: starter # Specify starter plan
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run NuAnswers.py --server.port $PORT --server.address 0.0.0.0
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.0
+      - key: OPENAI_API_KEY
+        value: ${OPENAI_API_KEY}
+      - key: ADMIN_PASSWORD
+        value: ${ADMIN_PASSWORD}
+      - key: STREAMLIT_SERVER_PORT
+        value: ${PORT}
+      - key: STREAMLIT_SERVER_ADDRESS
+        value: 0.0.0.0
+      - key: STREAMLIT_SERVER_ENABLE_CORS
+        value: false
+      - key: STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION
+        value: true
+    healthCheckPath: /
+    autoDeploy: true
+    domains:
+      - tutor-chatbot-fwpu.onrender.com
+      - nuanswers.org
+      - www.nuanswers.org
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /
+    headers:
+      - path: /*
+        name: Strict-Transport-Security
+        value: max-age=31536000; includeSubDomains; preload
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: Content-Security-Policy
+        value: "default-src 'self' https: 'unsafe-inline' 'unsafe-eval' data: blob:; frame-ancestors 'none'"
