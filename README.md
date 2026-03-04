@@ -641,7 +641,7 @@ If you see a certificate warning:
 
 ## 📜 License
 
-Nuanswers is protected under the [LICENSE](https://choosealicense.com/licenses) License. For more details, refer to the [LICENSE](https://choosealicense.com/licenses/) file.
+NuAnswers is licensed under the **Apache License 2.0**. See the [`LICENSE`](./LICENSE) file for details.
 
 ---
 
