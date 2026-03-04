@@ -760,8 +760,11 @@ Example of bad tutoring:
         
         # Track content access if documents are referenced
         if st.session_state.uploaded_documents:
-            for doc in st.session_state.uploaded_documents:
-                track_content_access(doc['name'], 'document' if not doc.get('is_image') else 'image')
+            try:
+                for doc in st.session_state.uploaded_documents:
+                    track_content_access(doc['name'], 'document' if not doc.get('is_image') else 'image')
+            except NameError:
+                pass  # track_content_access not in scope (e.g. some Streamlit run contexts)
         
         # Track resolution time if topic is completed
         if "current_topic_start" in st.session_state and "current_topic" in st.session_state:
