@@ -486,6 +486,97 @@ def extract_relevant_excerpt(query, content, max_chars=MAX_CONTEXT_CHARS_PER_DOC
         excerpt = excerpt + "..."
     return excerpt
 
+
+def save_feedback(rating, topic, difficulty):
+    """Save feedback data."""
+    et_tz = ZoneInfo("America/New_York")
+    feedback_entry = {
+        "timestamp": datetime.now(et_tz).strftime("%Y-%m-%d %H:%M:%S"),
+        "course_id": st.session_state.user_data.get("course_id"),
+        "rating": rating,
+        "topic": topic,
+        "difficulty": difficulty
+    }
+    st.session_state.feedback_data.append(feedback_entry)
+    save_to_csv(feedback_entry, FEEDBACK_DATA_PATH)
+
+
+def track_topic(topic, difficulty=None):
+    """Track topic data."""
+    et_tz = ZoneInfo("America/New_York")
+    topic_entry = {
+        "timestamp": datetime.now(et_tz).strftime("%Y-%m-%d %H:%M:%S"),
+        "course_id": st.session_state.user_data.get("course_id"),
+        "topic": topic,
+        "difficulty": difficulty
+    }
+    st.session_state.topic_data.append(topic_entry)
+    save_to_csv(topic_entry, TOPIC_DATA_PATH)
+
+
+def track_completion(completed):
+    """Track course completion."""
+    et_tz = ZoneInfo("America/New_York")
+    completion_entry = {
+        "timestamp": datetime.now(et_tz).strftime("%Y-%m-%d %H:%M:%S"),
+        "course_id": st.session_state.user_data.get("course_id"),
+        "completed": completed
+    }
+    st.session_state.completion_data.append(completion_entry)
+    save_to_csv(completion_entry, COMPLETION_DATA_PATH)
+
+
+def track_system_status(status, start_time, end_time=None):
+    """Track system uptime and status."""
+    if end_time is None:
+        end_time = datetime.now(ZoneInfo("America/New_York"))
+    duration = (end_time - start_time).total_seconds()
+    entry = {
+        "start_time": start_time.strftime("%Y-%m-%d %H:%M:%S"),
+        "end_time": end_time.strftime("%Y-%m-%d %H:%M:%S"),
+        "status": status,
+        "duration": duration
+    }
+    st.session_state.system_status.append(entry)
+    save_to_csv(entry, SYSTEM_STATUS_PATH)
+
+
+def track_content_access(content_id, content_type):
+    """Track content access patterns."""
+    entry = {
+        "timestamp": datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %H:%M:%S"),
+        "content_id": content_id,
+        "content_type": content_type,
+        "user_id": st.session_state.user_data.get("full_name")
+    }
+    st.session_state.content_access.append(entry)
+    save_to_csv(entry, CONTENT_ACCESS_PATH)
+
+
+def track_resolution_time(start_time, end_time, topic):
+    """Track problem resolution time."""
+    resolution_time = (end_time - start_time).total_seconds() / 60
+    entry = {
+        "timestamp": end_time.strftime("%Y-%m-%d %H:%M:%S"),
+        "resolution_time": resolution_time,
+        "topic": topic,
+        "user_id": st.session_state.user_data.get("full_name")
+    }
+    st.session_state.resolution_times.append(entry)
+    save_to_csv(entry, RESOLUTION_TIMES_PATH)
+
+
+def track_feedback_trend(satisfaction_score, suggestions=None):
+    """Track feedback trends over time."""
+    entry = {
+        "date": datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d"),
+        "satisfaction_score": satisfaction_score,
+        "suggestions": suggestions,
+        "user_id": st.session_state.user_data.get("full_name")
+    }
+    st.session_state.feedback_trends.append(entry)
+    save_to_csv(entry, FEEDBACK_TRENDS_PATH)
+
 # Main application logic for registered users
 if st.session_state.registered:
     # Show the introduction message once at the top
@@ -895,90 +986,6 @@ def show_admin_panel():
             st.info("No registration data available yet.")
     except Exception as e:
         st.error(f"Error loading registration data: {str(e)}")
-
-def save_feedback(rating, topic, difficulty):
-    """Save feedback data"""
-    et_tz = ZoneInfo("America/New_York")
-    feedback_entry = {
-        "timestamp": datetime.now(et_tz).strftime("%Y-%m-%d %H:%M:%S"),
-        "course_id": st.session_state.user_data.get("course_id"),
-        "rating": rating,
-        "topic": topic,
-        "difficulty": difficulty
-    }
-    st.session_state.feedback_data.append(feedback_entry)
-    save_to_csv(feedback_entry, FEEDBACK_DATA_PATH)
-
-def track_topic(topic, difficulty=None):
-    """Track topic data"""
-    et_tz = ZoneInfo("America/New_York")
-    topic_entry = {
-        "timestamp": datetime.now(et_tz).strftime("%Y-%m-%d %H:%M:%S"),
-        "course_id": st.session_state.user_data.get("course_id"),
-        "topic": topic,
-        "difficulty": difficulty
-    }
-    st.session_state.topic_data.append(topic_entry)
-    save_to_csv(topic_entry, TOPIC_DATA_PATH)
-
-def track_completion(completed):
-    """Track course completion"""
-    et_tz = ZoneInfo("America/New_York")
-    completion_entry = {
-        "timestamp": datetime.now(et_tz).strftime("%Y-%m-%d %H:%M:%S"),
-        "course_id": st.session_state.user_data.get("course_id"),
-        "completed": completed
-    }
-    st.session_state.completion_data.append(completion_entry)
-    save_to_csv(completion_entry, COMPLETION_DATA_PATH)
-
-def track_system_status(status, start_time, end_time=None):
-    """Track system uptime and status"""
-    if end_time is None:
-        end_time = datetime.now(ZoneInfo("America/New_York"))
-    duration = (end_time - start_time).total_seconds()
-    entry = {
-        "start_time": start_time.strftime("%Y-%m-%d %H:%M:%S"),
-        "end_time": end_time.strftime("%Y-%m-%d %H:%M:%S"),
-        "status": status,
-        "duration": duration
-    }
-    st.session_state.system_status.append(entry)
-    save_to_csv(entry, SYSTEM_STATUS_PATH)
-
-def track_content_access(content_id, content_type):
-    """Track content access patterns"""
-    entry = {
-        "timestamp": datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %H:%M:%S"),
-        "content_id": content_id,
-        "content_type": content_type,
-        "user_id": st.session_state.user_data.get("full_name")
-    }
-    st.session_state.content_access.append(entry)
-    save_to_csv(entry, CONTENT_ACCESS_PATH)
-
-def track_resolution_time(start_time, end_time, topic):
-    """Track problem resolution time"""
-    resolution_time = (end_time - start_time).total_seconds() / 60  # Convert to minutes
-    entry = {
-        "timestamp": end_time.strftime("%Y-%m-%d %H:%M:%S"),
-        "resolution_time": resolution_time,
-        "topic": topic,
-        "user_id": st.session_state.user_data.get("full_name")
-    }
-    st.session_state.resolution_times.append(entry)
-    save_to_csv(entry, RESOLUTION_TIMES_PATH)
-
-def track_feedback_trend(satisfaction_score, suggestions=None):
-    """Track feedback trends over time"""
-    entry = {
-        "date": datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d"),
-        "satisfaction_score": satisfaction_score,
-        "suggestions": suggestions,
-        "user_id": st.session_state.user_data.get("full_name")
-    }
-    st.session_state.feedback_trends.append(entry)
-    save_to_csv(entry, FEEDBACK_TRENDS_PATH)
 
 def track_yearly_data():
     """Track yearly performance metrics"""
