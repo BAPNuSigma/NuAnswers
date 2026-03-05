@@ -325,7 +325,7 @@ if not st.session_state.registered:
     
     with tab_register:
         st.subheader("Create account")
-        st.write("Please complete the form to create your NuAnswers account.")
+        st.write("Create your NuAnswers account (you’ll add course info when you start a chat).")
         with st.form("registration_form", clear_on_submit=False):
             full_name = st.text_input("Full Name")
             student_id = st.text_input("FDU Student ID (7 digits)")
@@ -336,52 +336,28 @@ if not st.session_state.registered:
                 "Major",
                 ["Accounting", "Finance", "MIS [Management Information Systems]"]
             )
-            course_name = st.text_input("Which class are you taking that relates to what you need help in?")
-            course_id = st.text_input("Course ID (Format: DEPT_####_##)", help="Examples: ACCT_2021_01, FIN_3250_02")
-            professor = st.text_input("Professor's Name")
-            professor_email = st.text_input("Professor's Email", help="Must be an FDU email address (@fdu.edu)")
 
-            # Validate course ID format
-            is_valid_course_id = False
-            if course_id:
-                valid_prefixes = ['ACCT', 'ECON', 'FIN', 'MIS', 'WMA']
-                pattern = f"^({'|'.join(valid_prefixes)})_\\d{{4}}_\\d{{2}}$"
-                is_valid_course_id = bool(re.match(pattern, course_id))
-                if not is_valid_course_id:
-                    st.error("""
-                    Invalid Course ID format. Please use one of the following formats:
-                    - ACCT_####_## | ECON_####_## | FIN_####_## | MIS_####_## | WMA_####_##
-                    Where # represents a digit.
-                    """)
+            # Validate Student ID and Email
             is_valid_student_id = student_id.isdigit() and len(student_id) == 7
             is_valid_student_email = student_email.endswith("@student.fdu.edu") or student_email.endswith("@fdu.edu")
-            is_valid_professor_email = professor_email.strip().lower().endswith("@fdu.edu") if professor_email else False
             if student_id and not is_valid_student_id:
                 st.error("Student ID must be exactly 7 digits.")
             if student_email and not is_valid_student_email:
                 st.error("Email must be a valid FDU email address.")
-            if professor_email and not is_valid_professor_email:
-                st.error("Professor's email must use the @fdu.edu domain.")
 
             submitted = st.form_submit_button("Create account")
             if submitted:
-                if not all([full_name, student_id, student_email, course_id, professor, professor_email]):
-                    st.error("Please fill in all required fields.")
+                if not all([full_name, student_id, student_email]):
+                    st.error("Please fill in Full Name, Student ID, and Student Email.")
                 elif not is_valid_student_id:
                     st.error("Student ID must be exactly 7 digits.")
                 elif not is_valid_student_email:
                     st.error("Email must be a valid FDU email address.")
-                elif not is_valid_professor_email:
-                    st.error("Professor's email must use the @fdu.edu domain.")
-                elif not is_valid_course_id:
-                    st.error("Please enter a valid Course ID format.")
                 else:
-                    # Check if account already exists (returning user should log in)
                     existing = find_account(student_id, student_email)
                     if existing is not None:
                         st.error("An account with this Student ID and email already exists. Please use the **Log in** tab.")
                     else:
-                        # Save account for future logins
                         save_account({
                             "full_name": full_name,
                             "student_id": student_id,
@@ -390,22 +366,14 @@ if not st.session_state.registered:
                             "campus": campus,
                             "major": major,
                         })
-                        # Save user data and registration
                         st.session_state.user_data = {
                             "full_name": full_name,
                             "student_id": student_id,
                             "student_email": student_email,
                             "grade": grade,
                             "campus": campus,
-                            "major": major,
-                            "course_name": course_name,
-                            "course_id": course_id,
-                            "professor": professor,
-                            "professor_email": professor_email
+                            "major": major
                         }
-                        et_tz = ZoneInfo("America/New_York")
-                        st.session_state.start_time = datetime.now(et_tz)
-                        save_registration(st.session_state.user_data, st.session_state.start_time)
                         st.session_state.registered = True
                         st.rerun()
 
@@ -498,6 +466,57 @@ def search_in_documents(query, documents):
 
 # Main application logic for registered users
 if st.session_state.registered:
+    # If no course set for this chat, show short "Start chat" form (course + professor only)
+    if not st.session_state.user_data.get("course_id"):
+        st.title("💬 Start a chat")
+        st.write("Which class and professor is this chat for? You can start a new chat anytime from the sidebar.")
+        with st.form("course_form", clear_on_submit=False):
+            course_name = st.text_input("Which class are you taking that relates to what you need help in?")
+            course_id = st.text_input("Course ID (Format: DEPT_####_##)", help="Examples: ACCT_2021_01, FIN_3250_02")
+            professor = st.text_input("Professor's Name")
+            professor_email = st.text_input("Professor's Email", help="Must be an FDU email address (@fdu.edu)")
+
+            is_valid_course_id = False
+            if course_id:
+                valid_prefixes = ['ACCT', 'ECON', 'FIN', 'MIS', 'WMA']
+                pattern = f"^({'|'.join(valid_prefixes)})_\\d{{4}}_\\d{{2}}$"
+                is_valid_course_id = bool(re.match(pattern, course_id))
+                if not is_valid_course_id:
+                    st.error("Invalid Course ID format. Use DEPT_####_## (e.g. ACCT_2021_01, FIN_3250_02).")
+            is_valid_professor_email = professor_email.strip().lower().endswith("@fdu.edu") if professor_email else False
+            if professor_email and not is_valid_professor_email:
+                st.error("Professor's email must use the @fdu.edu domain.")
+
+            submitted = st.form_submit_button("Start chat")
+            if submitted:
+                if not all([course_name, course_id, professor, professor_email]):
+                    st.error("Please fill in all fields.")
+                elif not is_valid_course_id:
+                    st.error("Please enter a valid Course ID format.")
+                elif not is_valid_professor_email:
+                    st.error("Professor's email must use the @fdu.edu domain.")
+                else:
+                    # Merge course into user_data and start session
+                    st.session_state.user_data["course_name"] = course_name
+                    st.session_state.user_data["course_id"] = course_id
+                    st.session_state.user_data["professor"] = professor
+                    st.session_state.user_data["professor_email"] = professor_email
+                    et_tz = ZoneInfo("America/New_York")
+                    st.session_state.start_time = datetime.now(et_tz)
+                    save_registration(st.session_state.user_data, st.session_state.start_time)
+                    # Reset chat for new session
+                    st.session_state.messages = [
+                        {"role": "assistant", "content": "Hello! I'm NuAnswers. I'm here to help you understand concepts and work through problems. What would you like to work on today?"}
+                    ]
+                    st.session_state.uploaded_documents = []
+                    st.rerun()
+        if st.sidebar.button("Logout", key="logout_from_course_form"):
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            st.session_state.registered = False
+            st.rerun()
+        st.stop()
+
     # Show the introduction message once at the top
     st.title("💬 NuAnswers")
     st.write(
@@ -853,7 +872,15 @@ Example of bad tutoring:
                 st.session_state.current_topic
             )
 
-    # Add a logout button at the top of the main content
+    # Sidebar: Start new chat and Logout
+    if st.sidebar.button("🆕 Start new chat"):
+        for key in ["course_name", "course_id", "professor", "professor_email"]:
+            st.session_state.user_data.pop(key, None)
+        st.session_state.messages = [
+            {"role": "assistant", "content": "Hello! I'm NuAnswers. I'm here to help you understand concepts and work through problems. What would you like to work on today?"}
+        ]
+        st.session_state.uploaded_documents = []
+        st.rerun()
     if st.sidebar.button("Logout"):
         st.session_state.logout_initiated = True
         st.rerun()
