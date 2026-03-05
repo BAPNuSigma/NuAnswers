@@ -1258,44 +1258,58 @@ try:
     # Raw Data Section with enhanced filtering
     st.subheader("📝 Raw Registration Data")
     
+    # Use a copy with datetime timestamp for date filter/sort (avoid float/str errors)
+    df_ts = df.copy()
+    if 'timestamp' in df_ts.columns and not df_ts.empty:
+        df_ts['timestamp'] = pd.to_datetime(df_ts['timestamp'], errors='coerce')
+        df_ts = df_ts.dropna(subset=['timestamp'])
+    
     # Filters
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        # Date filter
-        date_range = st.date_input(
-            "Filter by date range",
-            value=(df['timestamp'].min().date(), df['timestamp'].max().date()),
-            min_value=df['timestamp'].min().date(),
-            max_value=df['timestamp'].max().date()
-        )
+        # Date filter (safe when df_ts is empty or all NaT)
+        if not df_ts.empty and df_ts['timestamp'].notna().any():
+            ts_min, ts_max = df_ts['timestamp'].min(), df_ts['timestamp'].max()
+            date_range = st.date_input(
+                "Filter by date range",
+                value=(ts_min.date(), ts_max.date()),
+                min_value=ts_min.date(),
+                max_value=ts_max.date()
+            )
+        else:
+            st.date_input("Filter by date range", value=None, disabled=True)
+            date_range = ()  # skip date filter below
     
     with col2:
-        # Major filter
+        # Major filter (dropna to avoid float/str comparison in sorted)
+        major_opts = df['major'].dropna().astype(str).unique()
         selected_majors = st.multiselect(
             "Filter by Major",
-            options=sorted(df['major'].unique()),
+            options=sorted(major_opts),
             default=[]
         )
     
     with col3:
         # Campus filter
+        campus_opts = df['campus'].dropna().astype(str).unique()
         selected_campuses = st.multiselect(
             "Filter by Campus",
-            options=sorted(df['campus'].unique()),
+            options=sorted(campus_opts),
             default=[]
         )
     
     with col4:
         # Professor filter
+        prof_opts = df['professor'].dropna().astype(str).unique()
         selected_professors = st.multiselect(
             "Filter by Professor",
-            options=sorted(df['professor'].unique()),
+            options=sorted(prof_opts),
             default=[]
         )
     
-    # Apply filters
-    filtered_df = df.copy()
+    # Apply filters (use df_ts so timestamp is datetime)
+    filtered_df = df_ts.copy()
     
     if len(date_range) == 2:
         start_date, end_date = date_range
