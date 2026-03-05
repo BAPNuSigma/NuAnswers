@@ -115,6 +115,7 @@ def is_within_tutoring_hours():
 # Configure data directory
 DATA_DIR = Path("/data" if os.path.exists("/data") else ".")
 REGISTRATION_DATA_PATH = DATA_DIR / "registration_data.csv"
+ACCOUNTS_DATA_PATH = DATA_DIR / "accounts.csv"
 FEEDBACK_DATA_PATH = DATA_DIR / "feedback_data.csv"
 TOPIC_DATA_PATH = DATA_DIR / "topic_data.csv"
 COMPLETION_DATA_PATH = DATA_DIR / "completion_data.csv"
@@ -184,6 +185,39 @@ def save_to_csv(data, filepath):
         df.to_csv(filepath, index=False)
     except Exception as e:
         st.error(f"Failed to save data to {filepath}: {str(e)}")
+
+def load_accounts():
+    """Load accounts from CSV for login lookup"""
+    if not ACCOUNTS_DATA_PATH.exists():
+        return pd.DataFrame(columns=["full_name", "student_id", "student_email", "grade", "campus", "major"])
+    try:
+        return pd.read_csv(ACCOUNTS_DATA_PATH)
+    except Exception:
+        return pd.DataFrame(columns=["full_name", "student_id", "student_email", "grade", "campus", "major"])
+
+def find_account(student_id, student_email):
+    """Find account by student_id and student_email (email match is case-insensitive). Returns row as dict or None."""
+    df = load_accounts()
+    if df.empty:
+        return None
+    email_lower = (student_email or "").strip().lower()
+    match = df[(df["student_id"].astype(str).str.strip() == str(student_id).strip()) &
+               (df["student_email"].astype(str).str.strip().str.lower() == email_lower)]
+    if match.empty:
+        return None
+    return match.iloc[0].to_dict()
+
+def save_account(account_dict):
+    """Append one account row (full_name, student_id, student_email, grade, campus, major) to accounts.csv"""
+    row = {
+        "full_name": account_dict["full_name"],
+        "student_id": account_dict["student_id"],
+        "student_email": account_dict["student_email"],
+        "grade": account_dict["grade"],
+        "campus": account_dict["campus"],
+        "major": account_dict["major"],
+    }
+    save_to_csv(row, ACCOUNTS_DATA_PATH)
 
 def save_registration(user_data, start_time):
     """Save registration data to CSV"""
