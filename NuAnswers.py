@@ -287,87 +287,127 @@ def update_major():
     st.session_state.form_major = st.session_state.temp_major
     st.rerun()
 
-# Registration form
+# Login / Registration (when not logged in)
 if not st.session_state.registered:
-    st.title("📝 Registration Form")
-    st.write("Please complete the registration form to use NuAnswers. DISCLAIMER: All information will be kept private and not shared with anyone. This will not be shared with anyone and will only be used for by BAP: Nu Sigma Chapter.")
+    st.title("📚 NuAnswers")
+    st.write("DISCLAIMER: All information will be kept private and not shared with anyone. This will only be used by BAP: Nu Sigma Chapter.")
     
-    with st.form("registration_form", clear_on_submit=False):
-        full_name = st.text_input("Full Name")
-        student_id = st.text_input("FDU Student ID (7 digits)")
-        student_email = st.text_input("FDU Student Email (@student.fdu.edu or @fdu.edu)")
-        grade = st.selectbox("Grade", ["Freshman", "Sophomore", "Junior", "Senior", "Graduate"])
-        campus = st.selectbox("Campus", ["Florham", "Metro", "Vancouver"])
-        major = st.selectbox(
-            "Major",
-            ["Accounting", "Finance", "MIS [Management Information Systems]"]
-        )
-        course_name = st.text_input("Which class are you taking that relates to what you need help in?")
-        course_id = st.text_input("Course ID (Format: DEPT_####_##)", help="Examples: ACCT_2021_01, FIN_3250_02")
-        professor = st.text_input("Professor's Name")
-        professor_email = st.text_input("Professor's Email", help="Must be an FDU email address (@fdu.edu)")
+    tab_login, tab_register = st.tabs(["Log in", "Create account"])
+    
+    with tab_login:
+        with st.form("login_form", clear_on_submit=False):
+            st.subheader("Log in")
+            login_student_id = st.text_input("FDU Student ID (7 digits)", key="login_student_id")
+            login_student_email = st.text_input("FDU Student Email", key="login_student_email", placeholder="@student.fdu.edu or @fdu.edu")
+            login_submitted = st.form_submit_button("Log in")
+            if login_submitted:
+                if not login_student_id or not login_student_email:
+                    st.error("Please enter both Student ID and Student Email.")
+                elif not (login_student_id.isdigit() and len(login_student_id) == 7):
+                    st.error("Student ID must be exactly 7 digits.")
+                elif not (login_student_email.endswith("@student.fdu.edu") or login_student_email.endswith("@fdu.edu")):
+                    st.error("Email must be a valid FDU email address (@student.fdu.edu or @fdu.edu).")
+                else:
+                    account = find_account(login_student_id, login_student_email)
+                    if account is None:
+                        st.error("No account found with that Student ID and email. Please create an account or check your details.")
+                    else:
+                        st.session_state.user_data = {
+                            "full_name": account["full_name"],
+                            "student_id": str(account["student_id"]),
+                            "student_email": str(account["student_email"]),
+                            "grade": account["grade"],
+                            "campus": account["campus"],
+                            "major": account["major"],
+                        }
+                        st.session_state.registered = True
+                        st.rerun()
+    
+    with tab_register:
+        st.subheader("Create account")
+        st.write("Please complete the form to create your NuAnswers account.")
+        with st.form("registration_form", clear_on_submit=False):
+            full_name = st.text_input("Full Name")
+            student_id = st.text_input("FDU Student ID (7 digits)")
+            student_email = st.text_input("FDU Student Email (@student.fdu.edu or @fdu.edu)")
+            grade = st.selectbox("Grade", ["Freshman", "Sophomore", "Junior", "Senior", "Graduate"])
+            campus = st.selectbox("Campus", ["Florham", "Metro", "Vancouver"])
+            major = st.selectbox(
+                "Major",
+                ["Accounting", "Finance", "MIS [Management Information Systems]"]
+            )
+            course_name = st.text_input("Which class are you taking that relates to what you need help in?")
+            course_id = st.text_input("Course ID (Format: DEPT_####_##)", help="Examples: ACCT_2021_01, FIN_3250_02")
+            professor = st.text_input("Professor's Name")
+            professor_email = st.text_input("Professor's Email", help="Must be an FDU email address (@fdu.edu)")
 
-        # Validate course ID format
-        is_valid_course_id = False
-        if course_id:
-            valid_prefixes = ['ACCT', 'ECON', 'FIN', 'MIS', 'WMA']
-            pattern = f"^({'|'.join(valid_prefixes)})_\\d{{4}}_\\d{{2}}$"
-            is_valid_course_id = bool(re.match(pattern, course_id))
-            if not is_valid_course_id:
-                st.error("""
-                Invalid Course ID format. Please use one of the following formats:
-                - ACCT_####_##
-                - ECON_####_##
-                - FIN_####_##
-                - MIS_####_##
-                - WMA_####_##
-                Where # represents a digit.
-                """)
-        # Validate Student ID and Email
-        is_valid_student_id = student_id.isdigit() and len(student_id) == 7
-        is_valid_student_email = student_email.endswith("@student.fdu.edu") or student_email.endswith("@fdu.edu")
-        is_valid_professor_email = professor_email.strip().lower().endswith("@fdu.edu") if professor_email else False
-        if student_id and not is_valid_student_id:
-            st.error("Student ID must be exactly 7 digits.")
-        if student_email and not is_valid_student_email:
-            st.error("Email must be a valid FDU email address.")
-        if professor_email and not is_valid_professor_email:
-            st.error("Professor's email must use the @fdu.edu domain.")
-
-        submitted = st.form_submit_button("Submit")
-        if submitted:
-            if not all([full_name, student_id, student_email, course_id, professor, professor_email]):
-                st.error("Please fill in all required fields.")
-            elif not is_valid_student_id:
+            # Validate course ID format
+            is_valid_course_id = False
+            if course_id:
+                valid_prefixes = ['ACCT', 'ECON', 'FIN', 'MIS', 'WMA']
+                pattern = f"^({'|'.join(valid_prefixes)})_\\d{{4}}_\\d{{2}}$"
+                is_valid_course_id = bool(re.match(pattern, course_id))
+                if not is_valid_course_id:
+                    st.error("""
+                    Invalid Course ID format. Please use one of the following formats:
+                    - ACCT_####_## | ECON_####_## | FIN_####_## | MIS_####_## | WMA_####_##
+                    Where # represents a digit.
+                    """)
+            is_valid_student_id = student_id.isdigit() and len(student_id) == 7
+            is_valid_student_email = student_email.endswith("@student.fdu.edu") or student_email.endswith("@fdu.edu")
+            is_valid_professor_email = professor_email.strip().lower().endswith("@fdu.edu") if professor_email else False
+            if student_id and not is_valid_student_id:
                 st.error("Student ID must be exactly 7 digits.")
-            elif not is_valid_student_email:
+            if student_email and not is_valid_student_email:
                 st.error("Email must be a valid FDU email address.")
-            elif not is_valid_professor_email:
+            if professor_email and not is_valid_professor_email:
                 st.error("Professor's email must use the @fdu.edu domain.")
-            elif not is_valid_course_id:
-                st.error("Please enter a valid Course ID format.")
-            else:
-                # Save user data
-                st.session_state.user_data = {
-                    "full_name": full_name,
-                    "student_id": student_id,
-                    "student_email": student_email,
-                    "grade": grade,
-                    "campus": campus,
-                    "major": major,
-                    "course_name": course_name,
-                    "course_id": course_id,
-                    "professor": professor,
-                    "professor_email": professor_email
-                }
-                # Set start time with timezone
-                et_tz = ZoneInfo("America/New_York")
-                st.session_state.start_time = datetime.now(et_tz)
-                # Save registration data
-                save_registration(st.session_state.user_data, st.session_state.start_time)
-                # Set registered state
-                st.session_state.registered = True
-                st.rerun()
+
+            submitted = st.form_submit_button("Create account")
+            if submitted:
+                if not all([full_name, student_id, student_email, course_id, professor, professor_email]):
+                    st.error("Please fill in all required fields.")
+                elif not is_valid_student_id:
+                    st.error("Student ID must be exactly 7 digits.")
+                elif not is_valid_student_email:
+                    st.error("Email must be a valid FDU email address.")
+                elif not is_valid_professor_email:
+                    st.error("Professor's email must use the @fdu.edu domain.")
+                elif not is_valid_course_id:
+                    st.error("Please enter a valid Course ID format.")
+                else:
+                    # Check if account already exists (returning user should log in)
+                    existing = find_account(student_id, student_email)
+                    if existing is not None:
+                        st.error("An account with this Student ID and email already exists. Please use the **Log in** tab.")
+                    else:
+                        # Save account for future logins
+                        save_account({
+                            "full_name": full_name,
+                            "student_id": student_id,
+                            "student_email": student_email,
+                            "grade": grade,
+                            "campus": campus,
+                            "major": major,
+                        })
+                        # Save user data and registration
+                        st.session_state.user_data = {
+                            "full_name": full_name,
+                            "student_id": student_id,
+                            "student_email": student_email,
+                            "grade": grade,
+                            "campus": campus,
+                            "major": major,
+                            "course_name": course_name,
+                            "course_id": course_id,
+                            "professor": professor,
+                            "professor_email": professor_email
+                        }
+                        et_tz = ZoneInfo("America/New_York")
+                        st.session_state.start_time = datetime.now(et_tz)
+                        save_registration(st.session_state.user_data, st.session_state.start_time)
+                        st.session_state.registered = True
+                        st.rerun()
 
 # Function to extract text from different file types
 def extract_text_from_file(file):
