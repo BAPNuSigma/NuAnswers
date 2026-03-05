@@ -271,7 +271,7 @@ if not st.session_state.registered:
         course_name = st.text_input("Which class are you taking that relates to what you need help in?")
         course_id = st.text_input("Course ID (Format: DEPT_####_##)", help="Examples: ACCT_2021_01, FIN_3250_02")
         professor = st.text_input("Professor's Name")
-        professor_email = st.text_input("Professor's Email")
+        professor_email = st.text_input("Professor's Email", help="Must be an FDU email address (@fdu.edu)")
 
         # Validate course ID format
         is_valid_course_id = False
@@ -292,10 +292,13 @@ if not st.session_state.registered:
         # Validate Student ID and Email
         is_valid_student_id = student_id.isdigit() and len(student_id) == 7
         is_valid_student_email = student_email.endswith("@student.fdu.edu") or student_email.endswith("@fdu.edu")
+        is_valid_professor_email = professor_email.strip().lower().endswith("@fdu.edu") if professor_email else False
         if student_id and not is_valid_student_id:
             st.error("Student ID must be exactly 7 digits.")
         if student_email and not is_valid_student_email:
             st.error("Email must be a valid FDU email address.")
+        if professor_email and not is_valid_professor_email:
+            st.error("Professor's email must use the @fdu.edu domain.")
 
         submitted = st.form_submit_button("Submit")
         if submitted:
@@ -305,6 +308,8 @@ if not st.session_state.registered:
                 st.error("Student ID must be exactly 7 digits.")
             elif not is_valid_student_email:
                 st.error("Email must be a valid FDU email address.")
+            elif not is_valid_professor_email:
+                st.error("Professor's email must use the @fdu.edu domain.")
             elif not is_valid_course_id:
                 st.error("Please enter a valid Course ID format.")
             else:
